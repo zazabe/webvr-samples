@@ -1,0 +1,132 @@
+<!doctype html>
+<!--
+Copyright (c) 2016, Brandon Jones.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <title>Hello WebVR</title>
+
+    <style>
+      #webgl-canvas {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        margin: 0;
+      }
+    </style>
+
+    <script src="js/third-party/gl-matrix-min.js"></script>
+
+    <script src="js/wglu/wglu-cube-sea.js"></script>
+    <script src="js/wglu/wglu-program.js"></script>
+    <script src="js/wglu/wglu-texture.js"></script>
+    <script src="js/wglu/wglu-url.js"></script>
+  </head>
+  <body>
+    <canvas id="webgl-canvas"></canvas>
+    <script>
+      "use strict";
+
+      // Canvas setup
+      var webglCanvas = document.getElementById("webgl-canvas");
+      function onResize() {
+        webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
+        webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
+      }
+      window.addEventListener('resize', onResize, false);
+      onResize();
+
+      // WebGL setup
+      var gl = webglCanvas.getContext("webgl");
+      if (!gl) {
+        console.error("No WebGL support.");
+      }
+
+      gl.clearColor(0.1, 0.2, 0.3, 1.0);
+      gl.clearDepth(1.0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+
+      var textureLoader = new WGLUTextureLoader(gl);
+      var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
+      var cubeSea = new WGLUCubeSea(gl);
+
+      var projectionMat = mat4.create();
+      var modelViewMat = mat4.create();
+      var poseMat = mat4.create();
+
+      // VR setup
+      var vrDisplay = null;
+      navigator.getVRDisplays().then(function (displays) {
+        // Take the first display, if one is available
+        if (displays.length > 0) {
+          vrDisplay = displays[0];
+        }
+      });
+
+      // Scene Rendering
+      function renderEyeView(pose, eye) {
+        mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
+
+        mat4.identity(modelViewMat);
+        mat4.translate(modelViewMat, modelViewMat, eye.eyeTranslation);
+
+        mat4.fromRotationTranslation(poseMat, pose.orientation, pose.position);
+
+        mat4.multiply(modelViewMat, modelViewMat, poseMat);
+
+        cubeSea.render(projectionMat, modelViewMat, texture);
+      }
+
+      function onAnimationFrame(t) {
+        gl.clear(gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT);
+
+        if (vrDisplay) {
+          vrDisplay.requestAnimationFrame(onAnimationFrame);
+          // When a VR display is available, render a stereo view of the scene
+          // based on the diplay's pose
+          var pose = vrDisplay.getPose();
+
+          // Left eye
+          gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
+          renderEyeView(pose, vrDisplay.getEyeParameters("left"));
+
+          // Right eye
+          gl.viewport(webglCanvas.width * 0.5, 0, webglCanvas.width * 0.5, webglCanvas.height);
+          renderEyeView(pose, vrDisplay.getEyeParameters("right"));
+        } else {
+          window.requestAnimationFrame(onAnimationFrame);
+          // No VR device available, render normal mono view
+          gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
+          mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
+          mat4.identity(modelViewMat);
+          cubeSea.render(projectionMat, modelViewMat, texture);
+        }
+      }
+      window.requestAnimationFrame(onAnimationFrame);
+    </script>
+  </body>
+</html>
