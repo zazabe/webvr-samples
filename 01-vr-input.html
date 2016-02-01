@@ -25,7 +25,13 @@ THE SOFTWARE.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-    <title>Hello WebVR</title>
+    <title>01 - VR Input</title>
+
+    <!--
+      This sample demonstrates how to use the pose information from a VRDisplay
+      to control the view of a WebGL scene. Nothing is presented to the
+      VRDisplay.
+    -->
 
     <style>
       #webgl-canvas {
@@ -76,7 +82,6 @@ THE SOFTWARE.
 
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
-      var poseMat = mat4.create();
 
       // VR setup
       var vrDisplay = null;
@@ -87,44 +92,37 @@ THE SOFTWARE.
         }
       });
 
-      // Scene Rendering
-      function renderEyeView(pose, eye) {
-        mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
-
-        mat4.identity(modelViewMat);
-        mat4.translate(modelViewMat, modelViewMat, eye.eyeTranslation);
-
-        mat4.fromRotationTranslation(poseMat, pose.orientation, pose.position);
-
-        mat4.multiply(modelViewMat, modelViewMat, poseMat);
-
-        cubeSea.render(projectionMat, modelViewMat, texture);
-      }
-
       function onAnimationFrame(t) {
         gl.clear(gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT);
 
         if (vrDisplay) {
           vrDisplay.requestAnimationFrame(onAnimationFrame);
-          // When a VR display is available, render a stereo view of the scene
-          // based on the diplay's pose
+
+          // When a VRDisplay is available, render a view of the scene based on
+          // the diplay's pose
           var pose = vrDisplay.getPose();
 
-          // Left eye
-          gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
-          renderEyeView(pose, vrDisplay.getEyeParameters("left"));
-
-          // Right eye
-          gl.viewport(webglCanvas.width * 0.5, 0, webglCanvas.width * 0.5, webglCanvas.height);
-          renderEyeView(pose, vrDisplay.getEyeParameters("right"));
+          // From the glMatrix docs:
+          // Creates a matrix from a quaternion rotation and vector translation
+          // This is equivalent to (but much faster than):
+          //
+          //     mat4.identity(dest);
+          //     mat4.translate(dest, vec);
+          //     var quatMat = mat4.create();
+          //     quat4.toMat4(quat, quatMat);
+          //     mat4.multiply(dest, quatMat);
+          mat4.fromRotationTranslation(modelViewMat, pose.orientation, pose.position);
         } else {
           window.requestAnimationFrame(onAnimationFrame);
-          // No VR device available, render normal mono view
-          gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-          mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
+
           mat4.identity(modelViewMat);
-          cubeSea.render(projectionMat, modelViewMat, texture);
         }
+
+        gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
+        // Using a traditional perspective matrix here since the output is intended for a normal display
+        mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
+
+        cubeSea.render(projectionMat, modelViewMat, texture);
       }
       window.requestAnimationFrame(onAnimationFrame);
     </script>
