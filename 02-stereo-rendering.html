@@ -56,8 +56,27 @@ THE SOFTWARE.
     <script>
       "use strict";
 
-      // Canvas setup
+      var vrDisplay = null;
+      var projectionMat = mat4.create();
+      var modelViewMat = mat4.create();
+      var poseMat = mat4.create();
+
+      // ===================================================
+      // WebGL scene setup. This code is not WebVR specific.
+      // ===================================================
+
+      // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
+      var gl = webglCanvas.getContext("webgl");
+      gl.clearColor(0.1, 0.2, 0.3, 1.0); // Non-black makes debugging easier.
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+
+      // Load a simple scene consisting of a grid of floating cubes.
+      var textureLoader = new WGLUTextureLoader(gl);
+      var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
+      var cubeSea = new WGLUCubeSea(gl, texture);
+
       function onResize() {
         webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
         webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
@@ -65,56 +84,61 @@ THE SOFTWARE.
       window.addEventListener('resize', onResize, false);
       onResize();
 
-      // WebGL setup
-      var gl = webglCanvas.getContext("webgl");
-      if (!gl) {
-        console.error("No WebGL support.");
+      // ================================
+      // WebVR specific code begins here.
+      // ================================
+
+      if (navigator.getVRDisplays) {
+        navigator.getVRDisplays().then(function (displays) {
+          if (displays.length > 0) {
+            vrDisplay = displays[0];
+          }
+        });
       }
 
-      gl.clearColor(0.1, 0.2, 0.3, 1.0);
-      gl.clearDepth(1.0);
-      gl.enable(gl.DEPTH_TEST);
-      gl.enable(gl.CULL_FACE);
-
-      var textureLoader = new WGLUTextureLoader(gl);
-      var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
-      var cubeSea = new WGLUCubeSea(gl);
-
-      var projectionMat = mat4.create();
-      var modelViewMat = mat4.create();
-      var poseMat = mat4.create();
-
-      // VR setup
-      var vrDisplay = null;
-      navigator.getVRDisplays().then(function (displays) {
-        // Take the first display, if one is available
-        if (displays.length > 0) {
-          vrDisplay = displays[0];
-        }
-      });
-
-      // Scene Rendering
+      // Renders the scene from the viewpoint of the given eye and pose.
       function renderEyeView(pose, eye) {
+        var orientation = pose.orientation;
+        var position = pose.position;
+        if (!orientation) { orientation = [0, 0, 0, 1]; }
+        if (!position) { position = [0, 0, 0]; }
+
+        // Now that we're rendering for a specific eye, we need to use the FOV
+        // for that eye to generate the projection matrix. glMatrix has a
+        // function specifically for this, but if you're using a different
+        // library the algorithm needed is defined in the WebVR spec.
         mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
 
+        // Same matrix creation as last time, but done in an intermediate matrix
+        // so that it can be multiplied by the eye offset matrix.
+        mat4.fromRotationTranslation(poseMat, orientation, position);
+
+        // We need to translate the view matrix by the eye's offset in order to
+        // get the desired stereo effect.
         mat4.identity(modelViewMat);
         mat4.translate(modelViewMat, modelViewMat, eye.eyeTranslation);
-
-        mat4.fromRotationTranslation(poseMat, pose.orientation, pose.position);
-
         mat4.multiply(modelViewMat, modelViewMat, poseMat);
 
-        cubeSea.render(projectionMat, modelViewMat, texture);
+        // Render the scene for this eye.
+        cubeSea.render(projectionMat, modelViewMat);
       }
 
       function onAnimationFrame(t) {
+        window.requestAnimationFrame(onAnimationFrame);
         gl.clear(gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT);
 
         if (vrDisplay) {
-          vrDisplay.requestAnimationFrame(onAnimationFrame);
           // When a VR display is available, render a stereo view of the scene
           // based on the diplay's pose
           var pose = vrDisplay.getPose();
+
+          // For each eye we'll adjust the viewport to only render to half the
+          // canvas, which will give us the "split screen" output that we want.
+
+          // VRDevice.getEyeParameters gets the current parameters each eye
+          // should be rendered with. These values may change from frame to
+          // frame, so the best practice is to query them each time instead of
+          // caching them.
 
           // Left eye
           gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
@@ -124,12 +148,11 @@ THE SOFTWARE.
           gl.viewport(webglCanvas.width * 0.5, 0, webglCanvas.width * 0.5, webglCanvas.height);
           renderEyeView(pose, vrDisplay.getEyeParameters("right"));
         } else {
-          window.requestAnimationFrame(onAnimationFrame);
-          // No VR device available, render normal mono view
+          // No VRDisplay found. Render a normal mono view to the entire canvas.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
           mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
           mat4.identity(modelViewMat);
-          cubeSea.render(projectionMat, modelViewMat, texture);
+          cubeSea.render(projectionMat, modelViewMat);
         }
       }
       window.requestAnimationFrame(onAnimationFrame);

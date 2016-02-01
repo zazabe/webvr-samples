@@ -47,8 +47,10 @@ var WGLUCubeSea = (function() {
     "}",
   ].join("\n");
 
-  var CubeSea = function(gl) {
+  var CubeSea = function(gl, texture) {
     this.gl = gl;
+
+    this.texture = texture;
 
     this.program = new WGLUProgram(gl);
     this.program.attachShaderSource(cubeSeaVS, gl.VERTEX_SHADER);
@@ -151,7 +153,7 @@ var WGLUCubeSea = (function() {
     this.indexCount = cubeIndices.length;
   }
 
-  CubeSea.prototype.render = function(projectionMat, modelViewMat, texture) {
+  CubeSea.prototype.render = function(projectionMat, modelViewMat) {
     var gl = this.gl;
     var program = this.program;
 
@@ -171,7 +173,7 @@ var WGLUCubeSea = (function() {
 
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(this.program.uniform.diffuse, 0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
     gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
   }

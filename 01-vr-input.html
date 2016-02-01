@@ -56,52 +56,78 @@ THE SOFTWARE.
     <script>
       "use strict";
 
-      // Canvas setup
+      var vrDisplay = null;
+      var projectionMat = mat4.create();
+      var modelViewMat = mat4.create();
+
+      // ===================================================
+      // WebGL scene setup. This code is not WebVR specific.
+      // ===================================================
+
+      // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
+      var gl = webglCanvas.getContext("webgl");
+      gl.clearColor(0.1, 0.2, 0.3, 1.0); // Non-black makes debugging easier.
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+
+      // Load a simple scene consisting of a grid of floating cubes.
+      var textureLoader = new WGLUTextureLoader(gl);
+      var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
+      var cubeSea = new WGLUCubeSea(gl, texture);
+
       function onResize() {
         webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
         webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
+
+        // The viewport and projection matrix will change frequently when we
+        // begin rendering in stereo, but for now they only need to be updated
+        // when the window is resized.
+        gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
+        mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
       }
       window.addEventListener('resize', onResize, false);
       onResize();
 
-      // WebGL setup
-      var gl = webglCanvas.getContext("webgl");
-      if (!gl) {
-        console.error("No WebGL support.");
+      // ================================
+      // WebVR specific code begins here.
+      // ================================
+
+      // Since it's a new API not all browsers will have WebVR support. As such
+      // it's a good idea to check that the API is available before attempting
+      // to call it.
+      if (navigator.getVRDisplays) {
+        navigator.getVRDisplays().then(function (displays) {
+          // Use the first display in the array if one is available. If multiple
+          // displays are present you may want to present the user with a way to
+          // select which display they wish to use.
+          if (displays.length > 0) {
+            vrDisplay = displays[0];
+          }
+        });
       }
 
-      gl.clearColor(0.1, 0.2, 0.3, 1.0);
-      gl.clearDepth(1.0);
-      gl.enable(gl.DEPTH_TEST);
-      gl.enable(gl.CULL_FACE);
+      // Main rendering loop
+      function onAnimationFrame() {
+        // The normal requestAnimationFrame is used here because the scene is
+        // being not being presented to the VRDisplay, and so should run at the
+        // refresh rate of the users monitor instead of the headset.
+        window.requestAnimationFrame(onAnimationFrame);
 
-      var textureLoader = new WGLUTextureLoader(gl);
-      var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
-      var cubeSea = new WGLUCubeSea(gl);
-
-      var projectionMat = mat4.create();
-      var modelViewMat = mat4.create();
-
-      // VR setup
-      var vrDisplay = null;
-      navigator.getVRDisplays().then(function (displays) {
-        // Take the first display, if one is available
-        if (displays.length > 0) {
-          vrDisplay = displays[0];
-        }
-      });
-
-      function onAnimationFrame(t) {
         gl.clear(gl.COLOR_BUFFER_BIT || gl.DEPTH_BUFFER_BIT);
 
         if (vrDisplay) {
-          vrDisplay.requestAnimationFrame(onAnimationFrame);
-
-          // When a VRDisplay is available, render a view of the scene based on
-          // the diplay's pose
+          // If a VRDisplay was found, create a matrix based on its pose.
           var pose = vrDisplay.getPose();
 
+          // The pose and orientation may be null if the VRDisplay cannot report
+          // them for some reason. In that case, use reasonable defaults:
+          var orientation = pose.orientation;
+          var position = pose.position;
+          if (!orientation) { orientation = [0, 0, 0, 1]; }
+          if (!position) { position = [0, 0, 0]; }
+
+          // Create a Model/View matrix from the orientation and position.
           // From the glMatrix docs:
           // Creates a matrix from a quaternion rotation and vector translation
           // This is equivalent to (but much faster than):
@@ -111,18 +137,14 @@ THE SOFTWARE.
           //     var quatMat = mat4.create();
           //     quat4.toMat4(quat, quatMat);
           //     mat4.multiply(dest, quatMat);
-          mat4.fromRotationTranslation(modelViewMat, pose.orientation, pose.position);
+          mat4.fromRotationTranslation(modelViewMat, orientation, position);
         } else {
-          window.requestAnimationFrame(onAnimationFrame);
-
+          // If no VRDisplay was found, create a matrix using a fallback method.
           mat4.identity(modelViewMat);
         }
 
-        gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-        // Using a traditional perspective matrix here since the output is intended for a normal display
-        mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
-
-        cubeSea.render(projectionMat, modelViewMat, texture);
+        // Render the scene using the matrix.
+        cubeSea.render(projectionMat, modelViewMat);
       }
       window.requestAnimationFrame(onAnimationFrame);
     </script>
