@@ -1,0 +1,163 @@
+<!doctype html>
+<!--
+Copyright (c) 2016, Brandon Jones.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <title>00 - Hello WebVR!</title>
+
+    <!--
+      This sample enumerates over the connected VRDisplays and displays their
+      contents on screen. Useful for debugging. WebGL is not used in this sample
+      and nothing is presented to the VRDisplay.
+    -->
+
+    <style>
+      .vr-display {
+        font-family: sans-serif;
+        font-size: 0.8em;
+        border-bottom: 1px solid #888;
+      }
+
+      .vr-display h1 {
+        font-size: 1.2em;
+      }
+
+      .vr-display .float-array {
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      "use strict";
+
+      function buildVRElement(vrDisplay) {
+        var vrElement = document.createElement("div");
+        vrElement.classList.add("vr-display");
+
+        var header = document.createElement("h1");
+        header.innerHTML = vrDisplay.displayId + " - " + vrDisplay.displayName;
+        vrElement.appendChild(header);
+
+        // This function walks through the object recursively and builds a
+        // list of all the properties and values. It's a quick and dirty way
+        // to dump the contents of a VRDisplay onto the screen.
+        function buildMemberList(obj) {
+          var ul = document.createElement("ul");
+
+          for (var key in obj) {
+            if (typeof obj[key] == "function") {
+              continue;
+            }
+
+            var li = document.createElement("li");
+
+            if (obj[key] == null) {
+              li.innerHTML = "<b>" + key + ":</b> <i>null</i>";
+            } else if (Object.prototype.toString.call(obj[key]) == "[object Float32Array]") {
+              // This formatting ensures that the array prints at a fixed size
+              // as the values in the array change.
+              var value = "";
+              for (var idx in obj[key]) {
+                if (value != "")
+                  value += ",";
+                if (obj[key][idx] >= 0)
+                  value += " ";
+                value += obj[key][idx].toFixed(2);
+              }
+              li.innerHTML = "<b>" + key + ":</b> <span class='float-array'>[" + value + " ]</span>";
+            } else if (typeof obj[key] == "object") {
+              li.innerHTML = "<b>" + key + ":</b>";
+              li.appendChild(buildMemberList(obj[key]));
+            } else {
+              li.innerHTML = "<b>" + key + ":</b> " + obj[key];
+            }
+
+            ul.appendChild(li);
+          }
+
+          return ul;
+        }
+
+        var memberUL = buildMemberList(vrDisplay)
+
+        var pose = vrDisplay.getPose();
+        var poseLI = document.createElement("li");
+        poseLI.innerHTML = "<b>getPose():</b>";
+        var poseUL = buildMemberList(pose);
+        poseLI.appendChild(poseUL);
+        memberUL.appendChild(poseLI);
+
+        var leftEye = vrDisplay.getEyeParameters("left");
+        var leftEyeLI = document.createElement("li");
+        leftEyeLI.innerHTML = "<b>getEyeParameters('left'):</b>";
+        var leftEyeUL = buildMemberList(leftEye);
+        leftEyeLI.appendChild(leftEyeUL);
+        memberUL.appendChild(leftEyeLI);
+
+        var rightEye = vrDisplay.getEyeParameters("right");
+        var rightEyeLI = document.createElement("li");
+        rightEyeLI.innerHTML = "<b>getEyeParameters('right'):</b>";
+        var rightEyeUL = buildMemberList(rightEye);
+        rightEyeLI.appendChild(rightEyeUL);
+        memberUL.appendChild(rightEyeLI);
+
+        // Update the values that may change frame-to-frame
+        function onAnimationFrame() {
+          vrDisplay.requestAnimationFrame(onAnimationFrame);
+
+          pose = vrDisplay.getPose();
+          poseLI.removeChild(poseUL);
+          poseUL = buildMemberList(pose);
+          poseLI.appendChild(poseUL);
+
+          leftEye = vrDisplay.getEyeParameters("left");
+          leftEyeLI.removeChild(leftEyeUL);
+          leftEyeUL = buildMemberList(leftEye);
+          leftEyeLI.appendChild(leftEyeUL);
+
+          rightEye = vrDisplay.getEyeParameters("right");
+          rightEyeLI.removeChild(rightEyeUL);
+          rightEyeUL = buildMemberList(rightEye);
+          rightEyeLI.appendChild(rightEyeUL);
+        }
+        vrDisplay.requestAnimationFrame(onAnimationFrame);
+
+        vrElement.appendChild(memberUL);
+
+        return vrElement;
+      };
+
+      if (navigator.getVRDisplays) {
+        // Enumerate the VRDisplays
+        navigator.getVRDisplays().then(function (displays) {
+          for (var i = 0; i < displays.length; ++i) {
+            document.body.appendChild(buildVRElement(displays[i]));
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
