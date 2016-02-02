@@ -119,6 +119,8 @@ THE SOFTWARE.
         mat4.translate(modelViewMat, modelViewMat, eye.eyeTranslation);
         mat4.multiply(modelViewMat, modelViewMat, poseMat);
 
+        mat4.invert(modelViewMat, modelViewMat);
+
         // Render the scene for this eye.
         cubeSea.render(projectionMat, modelViewMat);
       }
