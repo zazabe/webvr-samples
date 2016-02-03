@@ -116,7 +116,7 @@ THE SOFTWARE.
         // We need to translate the view matrix by the eye's offset in order to
         // get the desired stereo effect.
         mat4.identity(modelViewMat);
-        mat4.translate(modelViewMat, modelViewMat, eye.eyeTranslation);
+        mat4.translate(modelViewMat, modelViewMat, eye.offset);
         mat4.multiply(modelViewMat, modelViewMat, poseMat);
 
         mat4.invert(modelViewMat, modelViewMat);

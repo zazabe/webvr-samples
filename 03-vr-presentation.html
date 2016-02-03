@@ -139,7 +139,7 @@ THE SOFTWARE.
         mat4.fromRotationTranslation(poseMat, orientation, position);
 
         mat4.identity(modelViewMat);
-        mat4.translate(modelViewMat, modelViewMat, eye.eyeTranslation);
+        mat4.translate(modelViewMat, modelViewMat, eye.offset);
         mat4.multiply(modelViewMat, modelViewMat, poseMat);
 
         mat4.invert(modelViewMat, modelViewMat);
