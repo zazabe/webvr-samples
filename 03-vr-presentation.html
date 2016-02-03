@@ -60,7 +60,6 @@ THE SOFTWARE.
       var presenting = false;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
-      var poseMat = mat4.create();
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -136,12 +135,8 @@ THE SOFTWARE.
 
         mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
 
-        mat4.fromRotationTranslation(poseMat, orientation, position);
-
-        mat4.identity(modelViewMat);
+        mat4.fromRotationTranslation(modelViewMat, orientation, position);
         mat4.translate(modelViewMat, modelViewMat, eye.offset);
-        mat4.multiply(modelViewMat, modelViewMat, poseMat);
-
         mat4.invert(modelViewMat, modelViewMat);
 
         cubeSea.render(projectionMat, modelViewMat);

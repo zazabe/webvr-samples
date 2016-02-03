@@ -59,7 +59,6 @@ THE SOFTWARE.
       var vrDisplay = null;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
-      var poseMat = mat4.create();
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -111,13 +110,11 @@ THE SOFTWARE.
 
         // Same matrix creation as last time, but done in an intermediate matrix
         // so that it can be multiplied by the eye offset matrix.
-        mat4.fromRotationTranslation(poseMat, orientation, position);
+        mat4.fromRotationTranslation(modelViewMat, orientation, position);
 
         // We need to translate the view matrix by the eye's offset in order to
         // get the desired stereo effect.
-        mat4.identity(modelViewMat);
         mat4.translate(modelViewMat, modelViewMat, eye.offset);
-        mat4.multiply(modelViewMat, modelViewMat, poseMat);
 
         mat4.invert(modelViewMat, modelViewMat);
 
