@@ -48,6 +48,8 @@ THE SOFTWARE.
         font-family: monospace;
       }
     </style>
+
+    <script src="js/vr-samples-util.js"></script>
   </head>
   <body>
     <script>
@@ -153,10 +155,16 @@ THE SOFTWARE.
       if (navigator.getVRDisplays) {
         // Enumerate the VRDisplays
         navigator.getVRDisplays().then(function (displays) {
+          if (!displays.length) {
+            VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.");
+            return;
+          }
           for (var i = 0; i < displays.length; ++i) {
             document.body.appendChild(buildVRElement(displays[i]));
           }
         });
+      } else {
+        VRSamplesUtil.addError("Your browser does not support WebVR. navigator.getVRDisplays not found.");
       }
     </script>
   </body>

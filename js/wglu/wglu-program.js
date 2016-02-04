@@ -23,7 +23,7 @@ THE SOFTWARE.
 var WGLUProgram = (function() {
 
   "use strict";
-  
+
   // Attempts to allow the browser to asynchronously compile and link
   var Program = function(gl) {
     this.gl = gl;
@@ -107,7 +107,7 @@ var WGLUProgram = (function() {
 
   Program.prototype.bindAttribLocation = function(attribLocationMap) {
     var gl = this.gl;
-    
+
     if (attribLocationMap) {
       this.attrib = {};
       for (var attribName in attribLocationMap) {

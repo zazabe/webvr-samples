@@ -37,7 +37,7 @@ var WGLUUrl = (function() {
       }
     }
   }
-  
+
   function getString(name, defaultValue) {
     ensureArgsCached();
     var lcaseName = name.toLowerCase();

@@ -133,11 +133,13 @@ var WGLUCubeSea = (function() {
       cubeVerts.push(x-size, y+size, z+size, 0.0, 0.0);
     }
 
+    var gridSize = 10;
+
     // Build the cube sea
-    for (var x = 0; x < 10; ++x) {
-      for (var y = 0; y < 10; ++y) {
-        for (var z = 0; z < 10; ++z) {
-          appendCube(x - 5, y - 5, z - 5);
+    for (var x = 0; x < gridSize; ++x) {
+      for (var y = 0; y < gridSize; ++y) {
+        for (var z = 0; z < gridSize; ++z) {
+          appendCube(x - (gridSize/2), y - (gridSize/2), z - (gridSize/2));
         }
       }
     }

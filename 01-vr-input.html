@@ -50,6 +50,8 @@ THE SOFTWARE.
     <script src="js/wglu/wglu-program.js"></script>
     <script src="js/wglu/wglu-texture.js"></script>
     <script src="js/wglu/wglu-url.js"></script>
+
+    <script src="js/vr-samples-util.js"></script>
   </head>
   <body>
     <canvas id="webgl-canvas"></canvas>
@@ -105,6 +107,8 @@ THE SOFTWARE.
             vrDisplay = displays[0];
           }
         });
+      } else {
+        VRSamplesUtil.addError("Your browser does not support WebVR. navigator.getVRDisplays not found.");
       }
 
       // Main rendering loop
