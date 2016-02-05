@@ -60,16 +60,93 @@ var VRSamplesUtil = (function() {
     return messageElement;
   }
 
-  function addError(message) {
-    return addMessageElement("<b/>ERROR:</b> " + message, "#D33");
+  // Makes the given element fade out and remove itself from the DOM after the
+  // given timeout
+  function makeToast(element, timeout) {
+    element.style.transition = "opacity 0.5s ease-in-out";
+    element.style.opacity = "1";
+    setTimeout(function() {
+      element.style.opacity = "0";
+      setTimeout(function() {
+        if (element.parentElement)
+          element.parentElement.removeChild(element);
+      }, 500);
+    }, timeout);
   }
 
-  function addInfo(message) {
-    return addMessageElement(message, "#22A");
+  function addError(message, timeout) {
+    var element = addMessageElement("<b/>ERROR:</b> " + message, "#D33");
+
+    if (timeout) {
+      makeToast(element, timeout);
+    }
+
+    return element;
+  }
+
+  function addInfo(message, timeout) {
+    var element = addMessageElement(message, "#22A");
+
+    if (timeout) {
+      makeToast(element, timeout);
+    }
+
+    return element;
+  }
+
+  function getButtonContainer() {
+    var buttonContainer = document.getElementById("button-container");
+    if (!buttonContainer) {
+      buttonContainer = document.createElement("div");
+      buttonContainer.id = "button-container";
+      buttonContainer.style.fontFamily = "sans-serif";
+      buttonContainer.style.position = "absolute";
+      buttonContainer.style.zIndex = "999";
+      buttonContainer.style.left = "0";
+      buttonContainer.style.bottom = "0";
+      buttonContainer.style.right = "0";
+      buttonContainer.style.margin = "0";
+      buttonContainer.style.padding = "0";
+      buttonContainer.align = "right";
+      document.body.appendChild(buttonContainer);
+    }
+    return buttonContainer;
+  }
+
+  function addButtonElement(message, icon) {
+    var buttonElement = document.createElement("div");
+    buttonElement.style.color = "#FFF";
+    buttonElement.style.fontWeight = "bold";
+    buttonElement.style.backgroundColor = "#888";
+    buttonElement.style.borderRadius = "5px";
+    buttonElement.style.border = "3px solid #555";
+    buttonElement.style.position = "relative";
+    buttonElement.style.display = "inline-block";
+    buttonElement.style.margin = "0.5em";
+    buttonElement.style.padding = "0.75em";
+    buttonElement.style.cursor = "pointer";
+    buttonElement.align = "center";
+
+    if (icon) {
+      buttonElement.innerHTML = "<img src='" + icon + "'/><br/>" + message;
+    } else {
+      buttonElement.innerHTML = message;
+    }
+
+    getButtonContainer().appendChild(buttonElement);
+
+    return buttonElement;
+  }
+
+  function addButton(message, icon, callback) {
+    var element = addButtonElement(message, icon);
+    element.addEventListener("click", callback, false);
+    return element;
   }
 
   return {
     addError: addError,
-    addInfo: addInfo
+    addInfo: addInfo,
+    addButton: addButton
   };
 })();

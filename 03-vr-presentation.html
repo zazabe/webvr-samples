@@ -59,7 +59,6 @@ THE SOFTWARE.
       "use strict";
 
       var vrDisplay = null;
-      var presenting = false;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
 
@@ -83,10 +82,26 @@ THE SOFTWARE.
       // WebVR specific code begins here.
       // ================================
 
+      function onVRRequestPresent() {
+        // This can only be called in response to a user gesture.
+        vrDisplay.requestPresent({ source: webglCanvas }).then(function() {
+          // Once we begin presenting the canvas should be resized to the
+          // recommended dimensions for the display.
+          onResize();
+        }, function(ex) {
+          VRSamplesUtil.addError("requestPresent failed.", 2000);
+        });
+      }
+
       if (navigator.getVRDisplays) {
         navigator.getVRDisplays().then(function (displays) {
           if (displays.length > 0) {
             vrDisplay = displays[0];
+
+            // Generally you want to wait until VR support is confirmed and
+            // you know the user has a VRDisplay connected before adding UI
+            // that advertises VR features.
+            VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
           }
         });
       } else {
@@ -94,13 +109,8 @@ THE SOFTWARE.
       }
 
       function onResize() {
-        if (!presenting) {
-          // We only want to change the size of the canvas drawing buffer to
-          // match the window dimensions when we're not presenting.
-          webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
-          webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
-        } else {
-          // If we're presenting we want to use the drawing buffer size
+        if (vrDisplay && vrDisplay.isPresenting) {
+           // If we're presenting we want to use the drawing buffer size
           // reccommended by the VRDevice, since that will ensure the best
           // results post-distortion.
           var leftEye = vrDisplay.getEyeParameters("left");
@@ -112,24 +122,15 @@ THE SOFTWARE.
           // account for that.
           webglCanvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
           webglCanvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
+        } else {
+          // We only want to change the size of the canvas drawing buffer to
+          // match the window dimensions when we're not presenting.
+          webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
+          webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
         }
       }
       window.addEventListener("resize", onResize, false);
       onResize();
-
-      function onVRRequestPresent() {
-        if (vrDisplay && !presenting) {
-          // This can only be called in response to a user gesture.
-          vrDisplay.requestPresent({ source: webglCanvas });
-        }
-      }
-      webglCanvas.addEventListener("click", onVRRequestPresent, false);
-
-      function onVRPresentChange(ev) {
-        presenting = navigator.activeVRDisplays.length > 0;
-        onResize();
-      }
-      window.addEventListener("vrdisplaypresentchange", onVRPresentChange, false);
 
       function renderEyeView(pose, eye) {
         var orientation = pose.orientation;
@@ -147,19 +148,15 @@ THE SOFTWARE.
       }
 
       function onAnimationFrame(t) {
-        if (presenting) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        if (vrDisplay && vrDisplay.isPresenting) {
           // When presenting content to the VRDisplay we want to update at its
           // refresh rate if it differs from the refresh rate of the main
           // display. Calling VRDisplay.requestAnimationFrame ensures we render
           // at the right speed for VR.
           vrDisplay.requestAnimationFrame(onAnimationFrame);
-        } else {
-          window.requestAnimationFrame(onAnimationFrame);
-        }
 
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        if (vrDisplay && presenting) {
           // As a general rule you want to get the pose as late as possible,
           // and call VRDisplay.submitFrame as early as possible after
           // retrieving the pose. Do any work for the frame that doesn't need
@@ -177,6 +174,8 @@ THE SOFTWARE.
           // display what pose was used to render the current frame.
           vrDisplay.submitFrame(pose);
         } else {
+          window.requestAnimationFrame(onAnimationFrame);
+
           // No VRDisplay found or we're not presenting.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
           mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
