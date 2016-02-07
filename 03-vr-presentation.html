@@ -35,12 +35,13 @@ THE SOFTWARE.
 
     <style>
       #webgl-canvas {
-        position: absolute;
-        width: 100%;
+        box-sizing: border-box;
         height: 100%;
         left: 0;
-        top: 0;
         margin: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
       }
     </style>
 
@@ -56,6 +57,8 @@ THE SOFTWARE.
   <body>
     <canvas id="webgl-canvas"></canvas>
     <script>
+      /* global mat4, WGLUCubeSea, WGLUTextureLoader, VRSamplesUtil */
+      (function () {
       "use strict";
 
       var vrDisplay = null;
@@ -69,7 +72,7 @@ THE SOFTWARE.
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
       var gl = webglCanvas.getContext("webgl");
-      gl.clearColor(0.1, 0.2, 0.3, 1.0); // Non-black makes debugging easier.
+      gl.clearColor(0.1, 0.2, 0.3, 1.0);  // Non-black makes debugging easier.
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);
 
@@ -82,13 +85,13 @@ THE SOFTWARE.
       // WebVR specific code begins here.
       // ================================
 
-      function onVRRequestPresent() {
+      function onVRRequestPresent () {
         // This can only be called in response to a user gesture.
-        vrDisplay.requestPresent({ source: webglCanvas }).then(function() {
-          // Once we begin presenting the canvas should be resized to the
+        vrDisplay.requestPresent({ source: webglCanvas }).then(function () {
+          // Once we begin presenting, the canvas should be resized to the
           // recommended dimensions for the display.
           onResize();
-        }, function(ex) {
+        }, function () {
           VRSamplesUtil.addError("requestPresent failed.", 2000);
         });
       }
@@ -98,7 +101,7 @@ THE SOFTWARE.
           if (displays.length > 0) {
             vrDisplay = displays[0];
 
-            // Generally you want to wait until VR support is confirmed and
+            // Generally, you want to wait until VR support is confirmed and
             // you know the user has a VRDisplay connected before adding UI
             // that advertises VR features.
             VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
@@ -108,10 +111,10 @@ THE SOFTWARE.
         VRSamplesUtil.addError("Your browser does not support WebVR. navigator.getVRDisplays not found.");
       }
 
-      function onResize() {
+      function onResize () {
         if (vrDisplay && vrDisplay.isPresenting) {
-           // If we're presenting we want to use the drawing buffer size
-          // reccommended by the VRDevice, since that will ensure the best
+          // If we're presenting we want to use the drawing buffer size
+          // recommended by the VRDevice, since that will ensure the best
           // results post-distortion.
           var leftEye = vrDisplay.getEyeParameters("left");
           var rightEye = vrDisplay.getEyeParameters("right");
@@ -132,7 +135,7 @@ THE SOFTWARE.
       window.addEventListener("resize", onResize, false);
       onResize();
 
-      function renderEyeView(pose, eye) {
+      function renderEyeView (pose, eye) {
         var orientation = pose.orientation;
         var position = pose.position;
         if (!orientation) { orientation = [0, 0, 0, 1]; }
@@ -147,7 +150,7 @@ THE SOFTWARE.
         cubeSea.render(projectionMat, modelViewMat);
       }
 
-      function onAnimationFrame(t) {
+      function onAnimationFrame (t) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         if (vrDisplay && vrDisplay.isPresenting) {
@@ -157,7 +160,7 @@ THE SOFTWARE.
           // at the right speed for VR.
           vrDisplay.requestAnimationFrame(onAnimationFrame);
 
-          // As a general rule you want to get the pose as late as possible,
+          // As a general rule you want to get the pose as late as possible
           // and call VRDisplay.submitFrame as early as possible after
           // retrieving the pose. Do any work for the frame that doesn't need
           // to know the pose earlier to ensure the lowest latency possible.
@@ -171,19 +174,20 @@ THE SOFTWARE.
 
           // If we're currently presenting to the VRDisplay we need to
           // explicitly indicate we're done rendering and inform the
-          // display what pose was used to render the current frame.
+          // display which pose was used to render the current frame.
           vrDisplay.submitFrame(pose);
         } else {
           window.requestAnimationFrame(onAnimationFrame);
 
           // No VRDisplay found or we're not presenting.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-          mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
+          mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(modelViewMat);
           cubeSea.render(projectionMat, modelViewMat);
         }
       }
       window.requestAnimationFrame(onAnimationFrame);
+      })();
     </script>
   </body>
 </html>
