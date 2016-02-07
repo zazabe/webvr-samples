@@ -46,19 +46,28 @@ var WGLUStats = (function() {
     "}",
   ].join("\n");
 
-  var segments = 100;
-  var maxFPS = 120;
+  var segments = 30;
+  var maxFPS = 90;
 
   function segmentToX(i) {
-    return ((0.9/segments) * i) - 0.45;
+    return ((0.9/(segments-1)) * i) - 0.45;
   }
 
   function fpsToY(value) {
     return (Math.min(value, maxFPS) * (0.7 / maxFPS)) - 0.45;
   }
 
+  var now = ( performance && performance.now ) ? performance.now.bind( performance ) : Date.now;
+
   var Stats = function(gl) {
     this.gl = gl;
+
+    this.startTime = now();
+    this.prevTime = this.startTime;
+    this.frames = 0;
+    this.fps = 0;
+
+    this.lastSegment = 0;
 
     this.program = new WGLUProgram(gl);
     this.program.attachShaderSource(statsVS, gl.VERTEX_SHADER);
@@ -96,9 +105,6 @@ var WGLUStats = (function() {
     // 60 FPS line
     addBGSquare(-0.45, fpsToY(60), 0.45, fpsToY(60.5), 0.015, 0.2, 0.0, 0.75);
 
-    // 90 FPS line
-    addBGSquare(-0.45, fpsToY(90), 0.45, fpsToY(90.5), 0.015, 0.0, 0.0, 1.0);
-
     this.bgVertBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.bgVertBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bgVerts), gl.STATIC_DRAW);
@@ -113,22 +119,22 @@ var WGLUStats = (function() {
     var fpsIndices = [];
 
     for (var i = 0; i < segments; ++i) {
-      fpsVerts.push(segmentToX(i), fpsToY(0), 0.02, 0.0, 0.8, 0.8);
-    }
+      fpsVerts.push(segmentToX(i), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
+      fpsVerts.push(segmentToX(i+1), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
 
-    for (var i = 0; i < segments; ++i) {
-      var value = (Math.random() * 30) + 0;
-      fpsVerts.push(segmentToX(i), fpsToY(value), 0.02, 0.0, 1.0, 1.0);
+      fpsVerts.push(segmentToX(i), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
+      fpsVerts.push(segmentToX(i+1), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
     }
 
     for (var i = 0; i < segments-1; ++i) {
-      fpsIndices.push(i, i+1, i+segments+1,
-                      i+segments+1, i+segments, i);
+      var idx = i * 4;
+      fpsIndices.push(idx, idx+3, idx+1,
+                      idx+3, idx, idx+2);
     }
 
     this.fpsVertBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.fpsVertBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fpsVerts), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fpsVerts), gl.DYNAMIC_DRAW);
 
     this.fpsIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.fpsIndexBuffer);
@@ -136,6 +142,65 @@ var WGLUStats = (function() {
 
     this.fpsIndexCount = fpsIndices.length;
   }
+
+  Stats.prototype.begin = function() {
+    this.startTime = now();
+  };
+
+  Stats.prototype.end = function() {
+    var time = now();
+
+    this.frames++;
+
+    if (time > this.prevTime + 100) {
+      this.fps = Math.round((this.frames * 1000) / (time - this.prevTime));
+
+      this.updateGraph(this.fps);
+
+      this.prevTime = time;
+      this.frames = 0;
+    }
+  };
+
+  Stats.prototype.updateGraph = function(value) {
+    var r = 1.0 - (value/maxFPS);
+    var g = (value/maxFPS);
+    var b = (value/maxFPS);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.fpsVertBuffer);
+
+    var updateVerts = [
+      segmentToX(this.lastSegment), fpsToY(value), 0.02, r, g, b,
+      segmentToX(this.lastSegment+1), fpsToY(value), 0.02, r, g, b,
+      segmentToX(this.lastSegment), fpsToY(0), 0.02, r, g, b,
+      segmentToX(this.lastSegment+1), fpsToY(0), 0.02, r, g, b,
+    ];
+
+    r = 0.2;
+    g = 1.0;
+    b = 0.2;
+
+    if (this.lastSegment == segments - 1) {
+      gl.bufferSubData(gl.ARRAY_BUFFER, this.lastSegment * 24 * 4, new Float32Array(updateVerts));
+      updateVerts = [
+        segmentToX(0), fpsToY(maxFPS), 0.02, r, g, b,
+        segmentToX(.25), fpsToY(maxFPS), 0.02, r, g, b,
+        segmentToX(0), fpsToY(0), 0.02, r, g, b,
+        segmentToX(.25), fpsToY(0), 0.02, r, g, b
+      ];
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, new Float32Array(updateVerts));
+    } else {
+      updateVerts.push(
+        segmentToX(this.lastSegment+1), fpsToY(maxFPS), 0.02, r, g, b,
+        segmentToX(this.lastSegment+1.25), fpsToY(maxFPS), 0.02, r, g, b,
+        segmentToX(this.lastSegment+1), fpsToY(0), 0.02, r, g, b,
+        segmentToX(this.lastSegment+1.25), fpsToY(0), 0.02, r, g, b
+      );
+      gl.bufferSubData(gl.ARRAY_BUFFER, this.lastSegment * 24 * 4, new Float32Array(updateVerts));
+    }
+
+    this.lastSegment = (this.lastSegment+1) % segments;
+  };
 
   Stats.prototype.render = function(projectionMat, modelViewMat) {
     var gl = this.gl;

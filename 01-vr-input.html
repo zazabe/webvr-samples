@@ -116,6 +116,8 @@ THE SOFTWARE.
 
       // Main rendering loop
       function onAnimationFrame() {
+        stats.begin();
+
         // The normal requestAnimationFrame is used here because the scene is
         // being not being presented to the VRDisplay, and so should run at the
         // refresh rate of the users monitor instead of the headset.
@@ -159,6 +161,8 @@ THE SOFTWARE.
         cubeSea.render(projectionMat, modelViewMat);
 
         //stats.render(projectionMat, modelViewMat);
+
+        stats.end();
       }
       window.requestAnimationFrame(onAnimationFrame);
     </script>
