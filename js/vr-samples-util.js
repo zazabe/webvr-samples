@@ -1,6 +1,3 @@
-/* global define, module */
-/*jshint multistr: true */
-
 /*
 Copyright (c) 2016, Brandon Jones.
 
@@ -23,24 +20,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-(function () {
+var VRSamplesUtil = (function() {
+
   "use strict";
 
-  function getMessageContainer () {
+  function getMessageContainer() {
     var messageContainer = document.getElementById("message-container");
     if (!messageContainer) {
       messageContainer = document.createElement("div");
       messageContainer.id = "message-container";
-      messageContainer.cssText = "\
-        font-family: sans-serif;\
-        left: 0;\
-        margin: 0;\
-        padding: 0;\
-        position: absolute;\
-        right: 0;\
-        text-align: center;\
-        top: 0;\
-        zIndex: -9999px;";
+      messageContainer.style.fontFamily = "sans-serif";
+      messageContainer.style.position = "absolute";
+      messageContainer.style.zIndex = "999";
+      messageContainer.style.left = "0";
+      messageContainer.style.top = "0";
+      messageContainer.style.right = "0";
+      messageContainer.style.margin = "0";
+      messageContainer.style.padding = "0";
+      messageContainer.align = "center";
       document.body.appendChild(messageContainer);
     }
     return messageContainer;
@@ -48,14 +45,13 @@ THE SOFTWARE.
 
   function addMessageElement(message, backgroundColor) {
     var messageElement = document.createElement("div");
-    messageElement.cssText = "\
-      color: #fff;\
-      background-color = " + backgroundColor + ";\
-      borderRadius: 3px;\
-      position: relative;\
-      display: inline-block;\
-      margin: 0.5em;\
-      padding: 0.75em;";
+    messageElement.style.color = "#FFF";
+    messageElement.style.backgroundColor = backgroundColor;
+    messageElement.style.borderRadius = "3px";
+    messageElement.style.position = "relative";
+    messageElement.style.display = "inline-block";
+    messageElement.style.margin = "0.5em";
+    messageElement.style.padding = "0.75em";
 
     messageElement.innerHTML = message;
 
@@ -67,21 +63,19 @@ THE SOFTWARE.
   // Makes the given element fade out and remove itself from the DOM after the
   // given timeout
   function makeToast(element, timeout) {
-    element.cssText = "\
-      transition: opacity 0.5s ease-in-out;\
-      opacity: 1;";
-    setTimeout(function () {
+    element.style.transition = "opacity 0.5s ease-in-out";
+    element.style.opacity = "1";
+    setTimeout(function() {
       element.style.opacity = "0";
-      setTimeout(function () {
-        if (element.parentNode) {
-          element.parentNode.removeChild(element);
-        }
+      setTimeout(function() {
+        if (element.parentElement)
+          element.parentElement.removeChild(element);
       }, 500);
     }, timeout);
   }
 
-  function addError (message, timeout) {
-    var element = addMessageElement("<b>ERROR:</b> " + message, "#D33");
+  function addError(message, timeout) {
+    var element = addMessageElement("<b/>ERROR:</b> " + message, "#D33");
 
     if (timeout) {
       makeToast(element, timeout);
@@ -90,7 +84,7 @@ THE SOFTWARE.
     return element;
   }
 
-  function addInfo (message, timeout) {
+  function addInfo(message, timeout) {
     var element = addMessageElement(message, "#22A");
 
     if (timeout) {
@@ -100,44 +94,41 @@ THE SOFTWARE.
     return element;
   }
 
-  function getButtonContainer () {
+  function getButtonContainer() {
     var buttonContainer = document.getElementById("button-container");
     if (!buttonContainer) {
       buttonContainer = document.createElement("div");
       buttonContainer.id = "button-container";
-      buttonContainer.cssText = "\
-        bottom: 0;\
-        box-sizing: border-box;\
-        font-family: sans-serif;\
-        left: 0;\
-        margin: 0;\
-        padding: 0;\
-        position: absolute;\
-        right: 0;\
-        text-align: center;\
-        z-index: -9999px;";
+      buttonContainer.style.fontFamily = "sans-serif";
+      buttonContainer.style.position = "absolute";
+      buttonContainer.style.zIndex = "999";
+      buttonContainer.style.left = "0";
+      buttonContainer.style.bottom = "0";
+      buttonContainer.style.right = "0";
+      buttonContainer.style.margin = "0";
+      buttonContainer.style.padding = "0";
+      buttonContainer.align = "right";
       document.body.appendChild(buttonContainer);
     }
     return buttonContainer;
   }
 
-  function addButtonElement (message, icon) {
+  function addButtonElement(message, icon) {
     var buttonElement = document.createElement("div");
-    buttonElement.cssText = "\
-      background-color: #888;\
-      border-radius: 5px;\
-      border: 3px solid #555;\
-      color: #fff;\
-      cursor: pointer;\
-      display: inline-block;\
-      font-weight: bold;\
-      margin: 0.5em;\
-      padding: 0.75em;\
-      position: relative;\
-      text-align: center;";
+    buttonElement.style.color = "#FFF";
+    buttonElement.style.fontWeight = "bold";
+    buttonElement.style.backgroundColor = "#888";
+    buttonElement.style.borderRadius = "5px";
+    buttonElement.style.border = "3px solid #555";
+    buttonElement.style.position = "relative";
+    buttonElement.style.display = "inline-block";
+    buttonElement.style.margin = "0.5em";
+    buttonElement.style.padding = "0.75em";
+    buttonElement.style.cursor = "pointer";
+    buttonElement.align = "center";
 
     if (icon) {
-      buttonElement.innerHTML = "<img src='" + icon + "'><br>" + message;
+      buttonElement.innerHTML = "<img src='" + icon + "'/><br/>" + message;
     } else {
       buttonElement.innerHTML = message;
     }
@@ -147,23 +138,15 @@ THE SOFTWARE.
     return buttonElement;
   }
 
-  function addButton (message, icon, callback) {
+  function addButton(message, icon, callback) {
     var element = addButtonElement(message, icon);
     element.addEventListener("click", callback, false);
     return element;
   }
 
-  var vrsamplesutil = {
+  return {
     addError: addError,
     addInfo: addInfo,
     addButton: addButton
   };
-
-  if (typeof define === "function" && define.amd) {
-    define("vrsamplesutil", vrsamplesutil);
-  } else if (typeof exports !== "undefined" && typeof module !== "undefined") {
-    module.exports = vrsamplesutil;
-  } else if (window) {
-    window.vrsamplesutil = vrsamplesutil;
-  }
 })();
