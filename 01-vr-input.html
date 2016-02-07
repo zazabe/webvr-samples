@@ -46,11 +46,12 @@ THE SOFTWARE.
 
     <script src="js/third-party/gl-matrix-min.js"></script>
 
-    <script src="js/wglu/wglu-cube-sea.js"></script>
     <script src="js/wglu/wglu-program.js"></script>
+    <script src="js/wglu/wglu-stats.js"></script>
     <script src="js/wglu/wglu-texture.js"></script>
     <script src="js/wglu/wglu-url.js"></script>
 
+    <script src="js/vr-cube-sea.js"></script>
     <script src="js/vr-samples-util.js"></script>
   </head>
   <body>
@@ -76,7 +77,9 @@ THE SOFTWARE.
       // Load a simple scene consisting of a grid of floating cubes.
       var textureLoader = new WGLUTextureLoader(gl);
       var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
-      var cubeSea = new WGLUCubeSea(gl, texture);
+      var cubeSea = new VRCubeSea(gl, texture);
+
+      var stats = new WGLUStats(gl);
 
       function onResize() {
         webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
@@ -154,6 +157,8 @@ THE SOFTWARE.
 
         // Render the scene using the matrix.
         cubeSea.render(projectionMat, modelViewMat);
+
+        //stats.render(projectionMat, modelViewMat);
       }
       window.requestAnimationFrame(onAnimationFrame);
     </script>
