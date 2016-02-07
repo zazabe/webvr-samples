@@ -25,10 +25,10 @@ var VRSamplesUtil = (function() {
   "use strict";
 
   function getMessageContainer() {
-    var messageContainer = document.getElementById("message-container");
+    var messageContainer = document.getElementById("vr-sample-message-container");
     if (!messageContainer) {
       messageContainer = document.createElement("div");
-      messageContainer.id = "message-container";
+      messageContainer.id = "vr-sample-message-container";
       messageContainer.style.fontFamily = "sans-serif";
       messageContainer.style.position = "absolute";
       messageContainer.style.zIndex = "999";
@@ -45,6 +45,7 @@ var VRSamplesUtil = (function() {
 
   function addMessageElement(message, backgroundColor) {
     var messageElement = document.createElement("div");
+    messageElement.classList.add = "vr-sample-message";
     messageElement.style.color = "#FFF";
     messageElement.style.backgroundColor = backgroundColor;
     messageElement.style.borderRadius = "3px";
@@ -75,7 +76,7 @@ var VRSamplesUtil = (function() {
   }
 
   function addError(message, timeout) {
-    var element = addMessageElement("<b/>ERROR:</b> " + message, "#D33");
+    var element = addMessageElement("<b>ERROR:</b> " + message, "#D33");
 
     if (timeout) {
       makeToast(element, timeout);
@@ -95,10 +96,10 @@ var VRSamplesUtil = (function() {
   }
 
   function getButtonContainer() {
-    var buttonContainer = document.getElementById("button-container");
+    var buttonContainer = document.getElementById("vr-sample-button-container");
     if (!buttonContainer) {
       buttonContainer = document.createElement("div");
-      buttonContainer.id = "button-container";
+      buttonContainer.id = "vr-sample-button-container";
       buttonContainer.style.fontFamily = "sans-serif";
       buttonContainer.style.position = "absolute";
       buttonContainer.style.zIndex = "999";
@@ -115,6 +116,7 @@ var VRSamplesUtil = (function() {
 
   function addButtonElement(message, icon) {
     var buttonElement = document.createElement("div");
+    buttonElement.classList.add = "vr-sample-button";
     buttonElement.style.color = "#FFF";
     buttonElement.style.fontWeight = "bold";
     buttonElement.style.backgroundColor = "#888";
