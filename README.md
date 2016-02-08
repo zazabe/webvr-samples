@@ -14,4 +14,6 @@ conceptual knowledge of both.
 
 # Further Reading
  - [WebVR Spec](http://mozvr.github.io/webvr-spec/webvr.html)
- - [How to Get WebVR](http://webvr.info/) 
+ - [How to Get WebVR](http://webvr.info/)
+
+WebVR image used with the permission of [Jaume Sanchez](https://www.clicktorelease.com/)
