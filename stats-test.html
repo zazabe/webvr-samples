@@ -62,12 +62,9 @@ THE SOFTWARE.
       var gl = webglCanvas.getContext("webgl");
       gl.clearColor(0.1, 0.2, 0.3, 1.0);
       gl.enable(gl.DEPTH_TEST);
-      gl.enable(gl.CULL_FACE);
+      //gl.enable(gl.CULL_FACE);
 
       var stats = new WGLUStats(gl);
-      stats.position[2] = -1.0;
-      stats.scale[0] = 0.5;
-      stats.scale[1] = 0.5;
 
       function onResize() {
         webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
@@ -83,16 +80,24 @@ THE SOFTWARE.
       onResize();
 
       // Main rendering loop
-      function onAnimationFrame() {
+      function onAnimationFrame(t) {
         window.requestAnimationFrame(onAnimationFrame);
 
         stats.begin();
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        mat4.identity(modelViewMat);
+        stats.renderOrtho(
+            16 * window.devicePixelRatio,
+            16 * window.devicePixelRatio,
+            80 * window.devicePixelRatio,
+            48 * window.devicePixelRatio);
 
-        stats.renderOrtho(16, 16, 160, 96);
+        mat4.identity(modelViewMat);
+        mat4.translate(modelViewMat, modelViewMat, [0, 0, -2]);
+        mat4.rotateY(modelViewMat, modelViewMat, t / 1000);
+
+        stats.render(projectionMat, modelViewMat);
 
         stats.end();
       }

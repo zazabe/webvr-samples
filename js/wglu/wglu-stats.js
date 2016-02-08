@@ -75,10 +75,6 @@ var WGLUStats = (function() {
     this.frames = 0;
     this.fps = 0;
 
-    this.scale = vec3.fromValues(1, 1, 1);
-    this.position = vec3.fromValues(0, 0, 0);
-    this.orientation = quat.fromValues(0, 0, 0, 1);
-
     this.orthoMatrix = mat4.create();
     this.matrix = mat4.create();
 
@@ -127,7 +123,7 @@ var WGLUStats = (function() {
     addBGSquare(-0.5, -0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 0.125);
 
     // FPS Background
-    addBGSquare(-0.45, -0.45, 0.45, 0.25, 0.01, 0.0, 0.0, 0.25);
+    addBGSquare(-0.45, -0.45, 0.45, 0.25, 0.01, 0.0, 0.0, 0.4);
 
     // 30 FPS line
     addBGSquare(-0.45, fpsToY(30), 0.45, fpsToY(32), 0.015, 0.5, 0.0, 0.5);
@@ -155,7 +151,7 @@ var WGLUStats = (function() {
 
     this.frames++;
 
-    if (time > this.prevTime + 100) {
+    if (time > this.prevTime + 250) {
       this.fps = Math.round((this.frames * 1000) / (time - this.prevTime));
 
       this.updateGraph(this.fps);
