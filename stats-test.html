@@ -46,8 +46,8 @@ THE SOFTWARE.
 
     <script src="js/third-party/gl-matrix-min.js"></script>
 
-    <script src="js/wglu/wglu-program.js"></script>
-    <script src="js/wglu/wglu-stats.js"></script>
+    <script src="js/third-party/wglu/wglu-program.js"></script>
+    <script src="js/third-party/wglu/wglu-stats.js"></script>
   </head>
   <body>
     <canvas id="webgl-canvas"></canvas>
@@ -91,11 +91,11 @@ THE SOFTWARE.
             16 * window.devicePixelRatio,
             16 * window.devicePixelRatio,
             80 * window.devicePixelRatio,
-            48 * window.devicePixelRatio);
+            80 * window.devicePixelRatio);
 
         mat4.identity(modelViewMat);
         mat4.translate(modelViewMat, modelViewMat, [0, 0, -2]);
-        mat4.rotateY(modelViewMat, modelViewMat, t / 1000);
+        mat4.rotateY(modelViewMat, modelViewMat, t / 2000);
 
         stats.render(projectionMat, modelViewMat);
 
