@@ -33,7 +33,7 @@ var WGLUStats = (function() {
 
     "void main() {",
     "  vColor = vec4(color, 1.0);",
-    "  gl_Position = projectionMat * modelViewMat * vec4( position.xy, position.z - 1.0, 1.0 );",
+    "  gl_Position = projectionMat * modelViewMat * vec4( position.xy, position.z - 2.0, 1.0 );",
     "}",
   ].join("\n");
 
@@ -50,7 +50,7 @@ var WGLUStats = (function() {
   var maxFPS = 90;
 
   function segmentToX(i) {
-    return ((0.9/(segments-1)) * i) - 0.45;
+    return ((0.9/segments) * i) - 0.45;
   }
 
   function fpsToY(value) {
@@ -78,19 +78,34 @@ var WGLUStats = (function() {
     });
     this.program.link();
 
-    var bgVerts = [];
-    var bgIndices = [];
+    var fpsVerts = [];
+    var fpsIndices = [];
+
+    // Graph geometry
+    for (var i = 0; i < segments; ++i) {
+      // Bar top
+      fpsVerts.push(segmentToX(i), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
+      fpsVerts.push(segmentToX(i+1), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
+
+      // Bar bottom
+      fpsVerts.push(segmentToX(i), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
+      fpsVerts.push(segmentToX(i+1), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
+
+      var idx = i * 4;
+      fpsIndices.push(idx, idx+3, idx+1,
+                      idx+3, idx, idx+2);
+    }
 
     function addBGSquare(left, bottom, right, top, z, r, g, b) {
-      var idxOffset = bgVerts.length / 6;
+      var idx = fpsVerts.length / 6;
 
-      bgVerts.push(left, bottom, z, r, g, b);
-      bgVerts.push(right, top, z, r, g, b);
-      bgVerts.push(left, top, z, r, g, b);
-      bgVerts.push(right, bottom, z, r, g, b);
+      fpsVerts.push(left, bottom, z, r, g, b);
+      fpsVerts.push(right, top, z, r, g, b);
+      fpsVerts.push(left, top, z, r, g, b);
+      fpsVerts.push(right, bottom, z, r, g, b);
 
-      bgIndices.push(idxOffset, idxOffset+1, idxOffset+2,
-                     idxOffset, idxOffset+3, idxOffset+1);
+      fpsIndices.push(idx, idx+1, idx+2,
+                     idx, idx+3, idx+1);
     };
 
     // Panel Background
@@ -104,33 +119,6 @@ var WGLUStats = (function() {
 
     // 60 FPS line
     addBGSquare(-0.45, fpsToY(60), 0.45, fpsToY(60.5), 0.015, 0.2, 0.0, 0.75);
-
-    this.bgVertBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.bgVertBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bgVerts), gl.STATIC_DRAW);
-
-    this.bgIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.bgIndexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(bgIndices), gl.STATIC_DRAW);
-
-    this.bgIndexCount = bgIndices.length;
-
-    var fpsVerts = [];
-    var fpsIndices = [];
-
-    for (var i = 0; i < segments; ++i) {
-      fpsVerts.push(segmentToX(i), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
-      fpsVerts.push(segmentToX(i+1), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
-
-      fpsVerts.push(segmentToX(i), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
-      fpsVerts.push(segmentToX(i+1), fpsToY(0), 0.02, 0.0, 1.0, 1.0);
-    }
-
-    for (var i = 0; i < segments-1; ++i) {
-      var idx = i * 4;
-      fpsIndices.push(idx, idx+3, idx+1,
-                      idx+3, idx, idx+2);
-    }
 
     this.fpsVertBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.fpsVertBuffer);
@@ -214,14 +202,6 @@ var WGLUStats = (function() {
     gl.enableVertexAttribArray(program.attrib.position);
     gl.enableVertexAttribArray(program.attrib.color);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.bgVertBuffer);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.bgIndexBuffer);
-
-    gl.vertexAttribPointer(program.attrib.position, 3, gl.FLOAT, false, 24, 0);
-    gl.vertexAttribPointer(program.attrib.color, 3, gl.FLOAT, false, 24, 12);
-
-    gl.drawElements(gl.TRIANGLES, this.bgIndexCount, gl.UNSIGNED_SHORT, 0);
-
     gl.bindBuffer(gl.ARRAY_BUFFER, this.fpsVertBuffer);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.fpsIndexBuffer);
 
@@ -229,6 +209,8 @@ var WGLUStats = (function() {
     gl.vertexAttribPointer(program.attrib.color, 3, gl.FLOAT, false, 24, 12);
 
     gl.drawElements(gl.TRIANGLES, this.fpsIndexCount, gl.UNSIGNED_SHORT, 0);
+
+    // TODO: Render FPS text
   }
 
   return Stats;
