@@ -160,7 +160,8 @@ THE SOFTWARE.
         // Render the scene using the matrix.
         cubeSea.render(projectionMat, modelViewMat);
 
-        //stats.render(projectionMat, modelViewMat);
+        // Render the FPS counter.
+        stats.renderOrtho();
 
         stats.end();
       }

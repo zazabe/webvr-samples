@@ -48,6 +48,7 @@ THE SOFTWARE.
     <script src="js/third-party/gl-matrix-min.js"></script>
 
     <script src="js/third-party/wglu/wglu-program.js"></script>
+    <script src="js/third-party/wglu/wglu-stats.js"></script>
     <script src="js/third-party/wglu/wglu-texture.js"></script>
     <script src="js/third-party/wglu/wglu-url.js"></script>
 
@@ -80,6 +81,8 @@ THE SOFTWARE.
       var textureLoader = new WGLUTextureLoader(gl);
       var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
       var cubeSea = new VRCubeSea(gl, texture);
+
+      var stats = new WGLUStats(gl);
 
       // ================================
       // WebVR specific code begins here.
@@ -151,6 +154,8 @@ THE SOFTWARE.
       }
 
       function onAnimationFrame (t) {
+        stats.begin();
+
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         if (vrDisplay && vrDisplay.isPresenting) {
@@ -184,7 +189,11 @@ THE SOFTWARE.
           mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(modelViewMat);
           cubeSea.render(projectionMat, modelViewMat);
+
+          stats.renderOrtho();
         }
+
+        stats.end();
       }
       window.requestAnimationFrame(onAnimationFrame);
       })();

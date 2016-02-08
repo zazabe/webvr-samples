@@ -74,8 +74,8 @@ var WGLUStats = (function() {
           left, bottom);
 
       segmentIndices[id] = [
-          idx, idx+1, idx+2,
-          idx, idx+2, idx+3];
+          idx, idx+2, idx+1,
+          idx, idx+3, idx+2];
     }
 
     var characters = {};
@@ -338,6 +338,8 @@ var WGLUStats = (function() {
   };
 
   Stats.prototype.updateGraph = function(value) {
+    var gl = this.gl;
+
     var color = fpsToRGB(value);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.fpsVertBuffer);
@@ -409,6 +411,15 @@ var WGLUStats = (function() {
 
   Stats.prototype.renderOrtho = function(x, y, width, height) {
     var canvas = this.gl.canvas;
+
+    if (x == undefined || y == undefined) {
+      x = 10 * window.devicePixelRatio;
+      y = 10 * window.devicePixelRatio;
+    }
+    if (width == undefined || height == undefined) {
+      width = 64 * window.devicePixelRatio;
+      height = 64 * window.devicePixelRatio;
+    }
 
     mat4.ortho(this.orthoMatrix, 0, canvas.width, 0, canvas.height, 0.1, 1024);
 
