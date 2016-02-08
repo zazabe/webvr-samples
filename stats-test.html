@@ -65,6 +65,9 @@ THE SOFTWARE.
       gl.enable(gl.CULL_FACE);
 
       var stats = new WGLUStats(gl);
+      stats.position[2] = -1.0;
+      stats.scale[0] = 0.5;
+      stats.scale[1] = 0.5;
 
       function onResize() {
         webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
@@ -89,7 +92,7 @@ THE SOFTWARE.
 
         mat4.identity(modelViewMat);
 
-        stats.render(projectionMat, modelViewMat);
+        stats.renderOrtho(16, 16, 160, 96);
 
         stats.end();
       }
