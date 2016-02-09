@@ -70,11 +70,10 @@ THE SOFTWARE.
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
       var gl = webglCanvas.getContext("webgl");
-      gl.clearColor(0.1, 0.2, 0.3, 1.0); // Non-black makes debugging easier.
+      gl.clearColor(0.1, 0.2, 0.3, 1.0);
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);
 
-      // Load a simple scene consisting of a grid of floating cubes.
       var textureLoader = new WGLUTextureLoader(gl);
       var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
       var cubeSea = new VRCubeSea(gl, texture);
@@ -162,8 +161,9 @@ THE SOFTWARE.
           mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
           mat4.identity(modelViewMat);
           cubeSea.render(projectionMat, modelViewMat);
-          stats.renderOrtho();
         }
+
+        stats.renderOrtho();
 
         stats.end();
       }

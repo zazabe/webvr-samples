@@ -25,12 +25,16 @@ THE SOFTWARE.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-    <title>03 - VR Presentation</title>
+    <title>04 - Monoscopic Rendering</title>
 
     <!--
-      This sample demonstrates how to present the contents of a WebGL canvas to
-      a VRDisplay. The content is not mirrored on the main display while being
-      presented.
+      This sample demonstrates how to render monoscopically: drawing only one
+      view of the scene and presenting it to both eyes. Doing so removes stereo
+      vision cues (everything appears to be painted on surface infinitely far
+      away) but cuts the GPU work by as much as half, making it a big
+      performance win for some scenes. Works especially well for non-stereo
+      panoramic photos and videos.
+      The content is not mirrored on the main display while being presented.
     -->
 
     <style>
@@ -88,10 +92,14 @@ THE SOFTWARE.
       // ================================
 
       function onVRRequestPresent () {
-        // This can only be called in response to a user gesture.
-        vrDisplay.requestPresent({ source: webglCanvas }).then(function () {
-          // Once we begin presenting, the canvas should be resized to the
-          // recommended dimensions for the display.
+        var layer = {
+          source: webglCanvas,
+          // To indicate a monoscopic rendering we set both viewports to overlap,
+          // in this case covering the entire canvas.
+          leftViewport: [0, 0, 1, 1],
+          rightViewport: [0, 0, 1, 1],
+        };
+        vrDisplay.requestPresent(layer).then(function () {
           onResize();
         }, function () {
           VRSamplesUtil.addError("requestPresent failed.", 2000);
@@ -115,21 +123,15 @@ THE SOFTWARE.
 
       function onResize () {
         if (vrDisplay && vrDisplay.isPresenting) {
-          // If we're presenting we want to use the drawing buffer size
-          // recommended by the VRDevice, since that will ensure the best
-          // results post-distortion.
           var leftEye = vrDisplay.getEyeParameters("left");
           var rightEye = vrDisplay.getEyeParameters("right");
 
-          // For simplicity we're going to render both eyes at the same size,
-          // even if one eye needs less resolution. You can render each eye at
-          // the exact size it needs, but you'll need to adjust the viewports to
-          // account for that.
-          webglCanvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
+          // When rendering monoscopically you only need to have a canvas large
+          // enough to cover one eye, so the "* 2" on the width from the
+          // previous sample has been removed
+          webglCanvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth);
           webglCanvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
         } else {
-          // We only want to change the size of the canvas drawing buffer to
-          // match the window dimensions when we're not presenting.
           webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
           webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
         }
@@ -137,59 +139,44 @@ THE SOFTWARE.
       window.addEventListener("resize", onResize, false);
       onResize();
 
-      function renderEyeView (pose, eye) {
-        var orientation = pose.orientation;
-        var position = pose.position;
-        if (!orientation) { orientation = [0, 0, 0, 1]; }
-        if (!position) { position = [0, 0, 0]; }
-
-        mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
-
-        mat4.fromRotationTranslation(modelViewMat, orientation, position);
-        mat4.translate(modelViewMat, modelViewMat, eye.offset);
-        mat4.invert(modelViewMat, modelViewMat);
-
-        cubeSea.render(projectionMat, modelViewMat);
-
-        // To ensure that the FPS counter is visible in VR mode we have to
-        // render it as part of the scene.
-        // TODO: Needs scaling/positioning
-        //stats.render(projectionMat, modelViewMat);
-      }
-
       function onAnimationFrame (t) {
         stats.begin();
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        // Rendering monoscopically uses the whole canvas whether you are presenting
+        // or not.
+        gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
+
         if (vrDisplay && vrDisplay.isPresenting) {
-          // When presenting content to the VRDisplay we want to update at its
-          // refresh rate if it differs from the refresh rate of the main
-          // display. Calling VRDisplay.requestAnimationFrame ensures we render
-          // at the right speed for VR.
           vrDisplay.requestAnimationFrame(onAnimationFrame);
 
-          // As a general rule you want to get the pose as late as possible
-          // and call VRDisplay.submitFrame as early as possible after
-          // retrieving the pose. Do any work for the frame that doesn't need
-          // to know the pose earlier to ensure the lowest latency possible.
+          var leftEye = vrDisplay.getEyeParameters("left");
+          var rightEye = vrDisplay.getEyeParameters("right");
+
+          // We want to render with a symmetrical field of view.
+          var mergedFov = leftEye; // FIXME
+          mat4.perspectiveFromFieldOfView(projectionMat, mergedFov, 0.1, 1024.0);
+
           var pose = vrDisplay.getPose();
+          var orientation = pose.orientation;
+          var position = pose.position;
+          if (!orientation) { orientation = [0, 0, 0, 1]; }
+          if (!position) { position = [0, 0, 0]; }
 
-          gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
-          renderEyeView(pose, vrDisplay.getEyeParameters("left"));
+          mat4.fromRotationTranslation(modelViewMat, orientation, position);
+          // When rendering monoscopically the eye offset should NOT be taken into account.
+          mat4.invert(modelViewMat, modelViewMat);
 
-          gl.viewport(webglCanvas.width * 0.5, 0, webglCanvas.width * 0.5, webglCanvas.height);
-          renderEyeView(pose, vrDisplay.getEyeParameters("right"));
+          cubeSea.render(projectionMat, modelViewMat);
 
-          // If we're currently presenting to the VRDisplay we need to
-          // explicitly indicate we're done rendering and inform the
-          // display which pose was used to render the current frame.
+          //stats.render(projectionMat, modelViewMat);
+
           vrDisplay.submitFrame(pose);
         } else {
           window.requestAnimationFrame(onAnimationFrame);
 
           // No VRDisplay found or we're not presenting.
-          gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
           mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(modelViewMat);
           cubeSea.render(projectionMat, modelViewMat);
