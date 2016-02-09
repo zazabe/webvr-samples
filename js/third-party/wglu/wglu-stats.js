@@ -250,9 +250,19 @@ var WGLUStats = (function() {
     this.frames = 0;
     this.fps = 0;
 
-    this.orthoMatrix = mat4.create();
-    this.matrix = mat4.create();
-    this.textMatrix = mat4.create();
+    this.orthoProjMatrix = mat4.create();
+    this.orthoViewMatrix = mat4.create();
+    this.modelViewMatrix = mat4.create();
+
+    // Hard coded because it doesn't change:
+    // Scale by 0.075 in X and Y
+    // Translate into upper left corner w/ z = 0.02
+    this.textMatrix = new Float32Array([
+      0.075, 0, 0, 0,
+      0, 0.075, 0, 0,
+      0, 0, 1, 0,
+      -0.3625, 0.3625, 0.02, 1
+    ]);
 
     this.lastSegment = 0;
 
@@ -344,6 +354,7 @@ var WGLUStats = (function() {
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.fpsVertBuffer);
 
+    // Update the current segment with the new FPS value
     var updateVerts = [
       segmentToX(this.lastSegment), fpsToY(value), 0.02, color.r, color.g, color.b,
       segmentToX(this.lastSegment+1), fpsToY(value), 0.02, color.r, color.g, color.b,
@@ -351,11 +362,14 @@ var WGLUStats = (function() {
       segmentToX(this.lastSegment+1), fpsToY(0), 0.02, color.r, color.g, color.b,
     ];
 
+    // Re-shape the next segment into the green "progress" line
     color.r = 0.2;
     color.g = 1.0;
     color.b = 0.2;
 
     if (this.lastSegment == segments - 1) {
+      // If we're updating the last segment we need to do two bufferSubDatas
+      // to update the segment and turn the first segment into the progress line.
       gl.bufferSubData(gl.ARRAY_BUFFER, this.lastSegment * 24 * 4, new Float32Array(updateVerts));
       updateVerts = [
         segmentToX(0), fpsToY(maxFPS), 0.02, color.r, color.g, color.b,
@@ -381,6 +395,10 @@ var WGLUStats = (function() {
     var gl = this.gl;
     var program = this.program;
 
+    // Render text first, minor win for early fragment discard
+    mat4.multiply(this.modelViewMatrix, modelViewMat, this.textMatrix);
+    this.sevenSegmentText.render(projectionMat, this.modelViewMatrix, this.fps + " FP5");
+
     program.use();
 
     gl.uniformMatrix4fv(program.uniform.projectionMat, false, projectionMat);
@@ -395,18 +413,8 @@ var WGLUStats = (function() {
     gl.vertexAttribPointer(program.attrib.position, 3, gl.FLOAT, false, 24, 0);
     gl.vertexAttribPointer(program.attrib.color, 3, gl.FLOAT, false, 24, 12);
 
+    // Draw the graph and background in a single call
     gl.drawElements(gl.TRIANGLES, this.fpsIndexCount, gl.UNSIGNED_SHORT, 0);
-
-    mat4.identity(this.textMatrix);
-    mat4.translate(this.textMatrix, this.textMatrix, [-0.4, 0.4, 0.0]);
-    mat4.scale(this.textMatrix, this.textMatrix, [0.075, 0.075, 1]);
-    mat4.translate(this.textMatrix, this.textMatrix, [0.5, -0.5, 0.02]);
-
-
-    mat4.multiply(this.textMatrix, modelViewMat, this.textMatrix);
-
-    this.sevenSegmentText.render(projectionMat, this.textMatrix, this.fps + " FP5");
-    // TODO: Render FPS text
   }
 
   Stats.prototype.renderOrtho = function(x, y, width, height) {
@@ -421,14 +429,14 @@ var WGLUStats = (function() {
       height = 64 * window.devicePixelRatio;
     }
 
-    mat4.ortho(this.orthoMatrix, 0, canvas.width, 0, canvas.height, 0.1, 1024);
+    mat4.ortho(this.orthoProjMatrix, 0, canvas.width, 0, canvas.height, 0.1, 1024);
 
-    mat4.identity(this.matrix);
-    mat4.translate(this.matrix, this.matrix, [x, canvas.height - height - y, -1]);
-    mat4.scale(this.matrix, this.matrix, [width, height, 1]);
-    mat4.translate(this.matrix, this.matrix, [0.5, 0.5, 0]);
+    mat4.identity(this.orthoViewMatrix);
+    mat4.translate(this.orthoViewMatrix, this.orthoViewMatrix, [x, canvas.height - height - y, -1]);
+    mat4.scale(this.orthoViewMatrix, this.orthoViewMatrix, [width, height, 1]);
+    mat4.translate(this.orthoViewMatrix, this.orthoViewMatrix, [0.5, 0.5, 0]);
 
-    this.render(this.orthoMatrix, this.matrix);
+    this.render(this.orthoProjMatrix, this.orthoViewMatrix);
   }
 
   return Stats;
