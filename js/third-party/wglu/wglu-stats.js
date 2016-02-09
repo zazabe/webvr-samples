@@ -425,8 +425,8 @@ var WGLUStats = (function() {
       y = 10 * window.devicePixelRatio;
     }
     if (width == undefined || height == undefined) {
-      width = 64 * window.devicePixelRatio;
-      height = 64 * window.devicePixelRatio;
+      width = 75 * window.devicePixelRatio;
+      height = 75 * window.devicePixelRatio;
     }
 
     mat4.ortho(this.orthoProjMatrix, 0, canvas.width, 0, canvas.height, 0.1, 1024);

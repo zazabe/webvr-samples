@@ -65,6 +65,7 @@ THE SOFTWARE.
       var vrDisplay = null;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
+      var statsMat = mat4.create();
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -153,8 +154,11 @@ THE SOFTWARE.
 
         // To ensure that the FPS counter is visible in VR mode we have to
         // render it as part of the scene.
-        // TODO: Needs scaling/positioning
-        //stats.render(projectionMat, modelViewMat);
+        mat4.fromTranslation(statsMat, [0, -0.3, -0.5]);
+        mat4.scale(statsMat, statsMat, [0.3, 0.3, 0.3]);
+        mat4.rotateX(statsMat, statsMat, -0.75);
+        mat4.multiply(statsMat, modelViewMat, statsMat);
+        stats.render(projectionMat, statsMat);
       }
 
       function onAnimationFrame (t) {
