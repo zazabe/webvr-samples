@@ -71,6 +71,8 @@ THE SOFTWARE.
       var modelViewMat = mat4.create();
       var statsMat = mat4.create();
 
+      var monoView;
+
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
       // ===================================================
@@ -92,13 +94,53 @@ THE SOFTWARE.
       // WebVR specific code begins here.
       // ================================
 
+      var calculateMonoView = (function() {
+        // It's expensive to frequently recreate matricies and vectors, so we
+        // use this pattern to cache them in a way that only makes them
+        // accessible to the desired function.
+        var leftEyeProjection = mat4.create();
+        var leftPlane = vec4.create();
+        var rightPlane = vec4.create();
+
+        return function(vrDisplay) {
+          var leftEye = vrDisplay.getEyeParameters("left");
+
+          mat4.perspectiveFromFieldOfView(leftEyeProjection, leftEye.fieldOfView, 0.1, 1024.0);
+          mat4.inverse(leftEyeProjection, leftEyeProjection);
+
+          vec4.set(leftPlane, -1, 0, 0, 1 );
+          vec4.set(rightPlane, 1, 0, 0, 1 );
+          vec4.transformMat4(leftPlane, leftPlane, leftEyeProjection);
+          vec4.transformMat4(rightPlane, rightPlane, leftEyeProjection);
+          var leftX = -leftPlane[0] / leftPlane[3];
+          var rightX = rightPlane[0]/ rightPlane[3];
+          var leftPercentage = leftX / (leftX + rightX);
+          var leftWidth = leftPercentage * leftEye.renderWidth;
+          var monoWidth = 2 * leftWidth;
+
+          var monoFieldOfView = {
+            upDegrees: leftEye.fieldOfView.upDegrees,
+            downDegrees: leftEye.fieldOfView.downDegrees,
+            leftDegrees: leftEye.fieldOfView.leftDegrees,
+            rightDegrees: -leftEye.fieldOfView.leftDegrees
+          };
+
+          return {
+            fieldOfView: monoFieldOfView,
+            renderWidth: monoWidth,
+            renderHeight: leftEye.renderHeight,
+            leftViewport: [0, 0, leftEye.renderWidth / monoWidth, 1],
+            rightViewport: [(monoWidth - leftEye.renderWidth) / monoWidth, 0, 1, 1]
+          };
+        }
+      })();
+
       function onVRRequestPresent () {
         var layer = {
           source: webglCanvas,
-          // To indicate a monoscopic rendering we set both viewports to overlap,
-          // in this case covering the entire canvas.
-          leftViewport: [0, 0, 1, 1],
-          rightViewport: [0, 0, 1, 1],
+          // To indicate a monoscopic rendering we set both viewports to overlap.
+          leftViewport: monoView.leftViewport,
+          rightViewport: monoView.rightViewport,
         };
         vrDisplay.requestPresent(layer).then(function () {
           onResize();
@@ -112,6 +154,8 @@ THE SOFTWARE.
           if (displays.length > 0) {
             vrDisplay = displays[0];
 
+            monoView = calculateMonoView(vrDisplay);
+
             // Generally, you want to wait until VR support is confirmed and
             // you know the user has a VRDisplay connected before adding UI
             // that advertises VR features.
@@ -124,14 +168,11 @@ THE SOFTWARE.
 
       function onResize () {
         if (vrDisplay && vrDisplay.isPresenting) {
-          var leftEye = vrDisplay.getEyeParameters("left");
-          var rightEye = vrDisplay.getEyeParameters("right");
-
           // When rendering monoscopically you only need to have a canvas large
           // enough to cover one eye, so the "* 2" on the width from the
           // previous sample has been removed
-          webglCanvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth);
-          webglCanvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
+          webglCanvas.width = monoView.renderWidth;
+          webglCanvas.height = monoView.renderHeight;
         } else {
           webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
           webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
@@ -149,15 +190,11 @@ THE SOFTWARE.
         // or not.
         gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
 
-        if (vrDisplay && vrDisplay.isPresenting) {
+        if (vrDisplay) {
           vrDisplay.requestAnimationFrame(onAnimationFrame);
 
-          var leftEye = vrDisplay.getEyeParameters("left");
-          var rightEye = vrDisplay.getEyeParameters("right");
-
           // We want to render with a symmetrical field of view.
-          var mergedFov = leftEye; // FIXME
-          mat4.perspectiveFromFieldOfView(projectionMat, mergedFov, 0.1, 1024.0);
+          mat4.perspectiveFromFieldOfView(projectionMat, monoView.fieldOfView, 0.1, 1024.0);
 
           var pose = vrDisplay.getPose();
           var orientation = pose.orientation;
