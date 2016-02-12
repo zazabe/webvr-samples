@@ -33,15 +33,16 @@ function VRDisplay() {
   };
   this.stageParameters = null;
 
+  this._waitingForPresent = false;
   this._layer = null;
 }
 
-VRDisplay.prototype.requestAnimationFrame = function() {
-  return window.requestAnimationFrame();
+VRDisplay.prototype.requestAnimationFrame = function(callback) {
+  return window.requestAnimationFrame(callback);
 };
 
-VRDisplay.prototype.cancelAnimationFrame = function() {
-  return window.requestAnimationFrame();
+VRDisplay.prototype.cancelAnimationFrame = function(id) {
+  return window.cancelAnimationFrame(id);
 };
 
 VRDisplay.prototype.requestPresent = function(layer) {
@@ -49,16 +50,62 @@ VRDisplay.prototype.requestPresent = function(layer) {
   this._layer = layer;
 
   return new Promise(function(resolve, reject) {
-    if (layer && layer.source && typeof layer.source == 'HTMLCanvasElement') {
+    self._waitingForPresent = false;
+    if (layer && layer.source) {
+      function onFullscreenChange() {
+        var fullscreenElement = document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement;
+
+        self.isPresenting = fullscreenElement == layer.source;
+        if (self.isPresenting) {
+          if (screen.orientation && screen.orientation.lock)
+            screen.orientation.lock("landscape-primary");
+          self._waitingForPresent = false;
+          resolve();
+        }
+      }
+      function onFullscreenError() {
+        if (!self._waitingForPresent)
+          return;
+
+        // TODO: Remove event listener
+
+        self._waitingForPresent = false;
+        self.isPresenting = false;
+
+        reject(new Error("Unable to present."));
+      }
+
+      layer.source.addEventListener("fullscreenchange", onFullscreenChange, false);
+      layer.source.addEventListener("webkitfullscreenchange", onFullscreenChange, false);
+      layer.source.addEventListener("mozfullscreenchange", onFullscreenChange, false);
+      layer.source.addEventListener("msfullscreenchange", onFullscreenChange, false);
+
+      layer.source.addEventListener("fullscreenerror", onFullscreenError, false);
+      layer.source.addEventListener("webkitfullscreenerror", onFullscreenError, false);
+      layer.source.addEventListener("mozfullscreenerror", onFullscreenError, false);
+      layer.source.addEventListener("msfullscreenerror", onFullscreenError, false);
+
+      self._waitingForPresent = true;
       // TODO: Spec says that requestFullscreen returns a promise, but that
       // doesn't seem to be implemented anywhere just yet.
-      layer.source.requestFullscreen();
-      self.isPresenting = true;
-      resolve();
-    } else {
+      if (layer.source.requestFullscreen)
+        layer.source.requestFullscreen();
+      else if (layer.source.webkitRequestFullscreen)
+        layer.source.webkitRequestFullscreen();
+      else if (layer.source.mozRequestFullScreen)
+        layer.source.mozRequestFullScreen();
+      else if (layer.source.msRequestFullscreen)
+        layer.source.msRequestFullscreen();
+      else
+        self._waitingForPresent = false;
+    }
+
+    if (!self._waitingForPresent) {
       document.exitFullscreen();
-      self.isPresenting = false;
-      reject(new Error("Invalid layer source."));
+      reject(new Error("Unable to present."));
     }
   });
 };
@@ -72,7 +119,15 @@ VRDisplay.prototype.exitPresent = function() {
     if (wasPresenting) {
       // TODO: Spec says that exitFullscreen returns a promise, but that
       // doesn't seem to be implemented anywhere just yet.
-      document.exitFullscreen();
+      if (document.exitFullscreen)
+        document.exitFullscreen();
+      else if (document.webkitExitFullscreen)
+        document.webkitExitFullscreen();
+      else if (document.mozCancelFullScreen)
+        document.mozCancelFullScreen();
+      else if (document.msExitFullscreen)
+        document.msExitFullscreen();
+
       resolve();
     } else {
       reject(new Error("Was not presenting to VRDisplay."));
