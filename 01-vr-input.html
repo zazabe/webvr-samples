@@ -49,20 +49,9 @@ THE SOFTWARE.
     <script src="js/third-party/wglu/wglu-program.js"></script>
     <script src="js/third-party/wglu/wglu-stats.js"></script>
     <script src="js/third-party/wglu/wglu-texture.js"></script>
-    <script src="js/third-party/wglu/wglu-url.js"></script>
 
     <script src="js/vr-cube-sea.js"></script>
     <script src="js/vr-samples-util.js"></script>
-
-    <script>
-    // Conditionally enable the WebVR polyfill
-    var enablePolyfill = WGLUUrl.getBool("polyfill", false);
-    if (enablePolyfill) {
-      var polyfillScript = document.createElement("script");
-      polyfillScript.src = "js/third-party/webvr-polyfill.js";
-      document.getElementsByTagName('head')[0].appendChild(polyfillScript);
-    }
-    </script>
   </head>
   <body>
     <canvas id="webgl-canvas"></canvas>
@@ -118,6 +107,8 @@ THE SOFTWARE.
           // select which display they wish to use.
           if (displays.length > 0) {
             vrDisplay = displays[0];
+          } else {
+            VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
           }
         });
       } else {

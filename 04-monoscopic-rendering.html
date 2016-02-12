@@ -158,6 +158,8 @@ THE SOFTWARE.
             // you know the user has a VRDisplay connected before adding UI
             // that advertises VR features.
             VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+          } else {
+            VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
           }
         });
       } else {
