@@ -50,6 +50,8 @@ var VRCubeSea = (function() {
   var CubeSea = function(gl, texture) {
     this.gl = gl;
 
+    this.statsMat = mat4.create();
+
     this.texture = texture;
 
     this.program = new WGLUProgram(gl);
@@ -155,7 +157,7 @@ var VRCubeSea = (function() {
     this.indexCount = cubeIndices.length;
   }
 
-  CubeSea.prototype.render = function(projectionMat, modelViewMat) {
+  CubeSea.prototype.render = function(projectionMat, modelViewMat, stats) {
     var gl = this.gl;
     var program = this.program;
 
@@ -178,6 +180,16 @@ var VRCubeSea = (function() {
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
 
     gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_SHORT, 0);
+
+    if (stats) {
+      // To ensure that the FPS counter is visible in VR mode we have to
+        // render it as part of the scene.
+        mat4.fromTranslation(this.statsMat, [0, -0.3, -0.5]);
+        mat4.scale(this.statsMat, this.statsMat, [0.3, 0.3, 0.3]);
+        mat4.rotateX(this.statsMat, this.statsMat, -0.75);
+        mat4.multiply(this.statsMat, modelViewMat, this.statsMat);
+        stats.render(projectionMat, this.statsMat);
+    }
   }
 
   return CubeSea;

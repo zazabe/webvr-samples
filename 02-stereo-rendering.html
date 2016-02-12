@@ -125,7 +125,7 @@ THE SOFTWARE.
         mat4.invert(modelViewMat, modelViewMat);
 
         // Render the scene for this eye.
-        cubeSea.render(projectionMat, modelViewMat);
+        cubeSea.render(projectionMat, modelViewMat, stats);
       }
 
       function onAnimationFrame(t) {
@@ -163,7 +163,7 @@ THE SOFTWARE.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
           mat4.perspective(projectionMat, 45, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
           mat4.identity(modelViewMat);
-          cubeSea.render(projectionMat, modelViewMat);
+          cubeSea.render(projectionMat, modelViewMat, stats);
           stats.renderOrtho();
         }
 
