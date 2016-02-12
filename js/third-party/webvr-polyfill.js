@@ -64,6 +64,9 @@ VRDisplay.prototype.requestPresent = function(layer) {
             screen.orientation.lock("landscape-primary");
           self._waitingForPresent = false;
           resolve();
+        } else {
+          if (screen.orientation && screen.orientation.unlock)
+            screen.orientation.unlock();
         }
       }
       function onFullscreenError() {
