@@ -20,6 +20,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+/*
+Heavily inspired by Mr. Doobs stats.js, this FPS counter is rendered completely
+with WebGL, allowing it to be shown in cases where overlaid HTML elements aren't
+usable (like WebVR), or if you want the FPS counter to be rendered as part of
+your scene.
+
+See stats-test.html for basic usage.
+*/
 var WGLUStats = (function() {
 
   "use strict";

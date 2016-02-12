@@ -20,6 +20,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+/*
+Provides a simple way to get values from the query string if they're present
+and use a default value if not. Not strictly a "WebGL" utility, but I use it
+frequently enough for debugging that I wanted to include it here.
+
+Example:
+For the URL http://example.com/index.html?particleCount=1000
+
+WGLUUrl.getInt("particleCount", 100); // URL overrides, returns 1000
+WGLUUrl.getInt("particleSize", 10); // Not in URL, returns default of 10
+*/
 var WGLUUrl = (function() {
 
   "use strict";

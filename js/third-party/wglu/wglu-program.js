@@ -20,6 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+/*
+Utility class to make loading shader programs easier. Does all the error
+checking you typically want, automatically queries uniform and attribute
+locations, and attempts to take advantage of some browser's ability to link
+asynchronously by not querying any information from the program until it's
+first use.
+*/
 var WGLUProgram = (function() {
 
   "use strict";

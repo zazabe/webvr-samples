@@ -20,6 +20,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
+/*
+Handles loading of textures of mutliple formats, tries to be efficent about it.
+
+Formats supported will vary by devices. Use the .supports<format>() functions
+to determine if a format is supported. Most of the time you can just call
+loader.loadTexture("url"); and it will handle it based on the extension.
+If the extension can't be relied on use the corresponding
+.load<Extension>("url") calls.
+*/
 var WGLUTextureLoader = (function() {
 
   "use strict";
