@@ -1,0 +1,206 @@
+<!doctype html>
+<!--
+Copyright (c) 2016, Brandon Jones.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <title>06 - Room Scale</title>
+
+    <!--
+      This sample demonstrates how to create scenes that align with the space
+      physically available to the user (when that information is available.)
+    -->
+
+    <style>
+      #webgl-canvas {
+        box-sizing: border-box;
+        height: 100%;
+        left: 0;
+        margin: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
+    </style>
+
+    <script src="js/third-party/gl-matrix-min.js"></script>
+    <script src="js/third-party/webvr-polyfill.js"></script>
+
+    <script src="js/third-party/wglu/wglu-program.js"></script>
+    <script src="js/third-party/wglu/wglu-stats.js"></script>
+    <script src="js/third-party/wglu/wglu-texture.js"></script>
+
+    <script src="js/vr-cube-island.js"></script>
+    <script src="js/vr-samples-util.js"></script>
+  </head>
+  <body>
+    <canvas id="webgl-canvas"></canvas>
+    <script>
+      /* global mat4, WGLUCubeIsland, WGLUTextureLoader, VRSamplesUtil */
+      (function () {
+      "use strict";
+
+      var vrDisplay = null;
+      var projectionMat = mat4.create();
+      var modelViewMat = mat4.create();
+      var offsetPosition = vec3.create();
+
+      // ===================================================
+      // WebGL scene setup. This code is not WebVR specific.
+      // ===================================================
+
+      // WebGL setup.
+      var webglCanvas = document.getElementById("webgl-canvas");
+      var gl = webglCanvas.getContext("webgl");
+      gl.clearColor(0.1, 0.2, 0.3, 1.0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+
+      var textureLoader = new WGLUTextureLoader(gl);
+      var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
+
+      var stats = new WGLUStats(gl);
+
+      // ================================
+      // WebVR specific code begins here.
+      // ================================
+
+      // If the VRDisplay doesn't have stageParameters we won't know
+      // how big the users play space. Construct a scene around a
+      // default space size like 2 meters by 2 meters as a placeholder.
+      var cubeIsland = new VRCubeIsland(gl, texture, 2, 2);
+
+      function onVRRequestPresent () {
+        // This can only be called in response to a user gesture.
+        vrDisplay.requestPresent({ source: webglCanvas }).then(function () {
+          // Once we begin presenting, the canvas should be resized to the
+          // recommended dimensions for the display.
+          onResize();
+        }, function () {
+          VRSamplesUtil.addError("requestPresent failed.", 2000);
+        });
+      }
+
+      if (navigator.getVRDisplays) {
+        navigator.getVRDisplays().then(function (displays) {
+          if (displays.length > 0) {
+            vrDisplay = displays[0];
+
+            if (vrDisplay.stageParameters) {
+              // If we have stageParameters use that to resize our scene to
+              // match the users available space more closely.
+              cubeIsland.resize(vrDisplay.stageParameters.sizeX, vrDisplay.stageParameters.sizeZ);
+            }
+
+            VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+          } else {
+            VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
+          }
+        });
+      } else {
+        VRSamplesUtil.addError("Your browser does not support WebVR. See <a href='http://webvr.info'>webvr.info</a> for assistance.");
+      }
+
+      function onResize () {
+        if (vrDisplay && vrDisplay.isPresenting) {
+          var leftEye = vrDisplay.getEyeParameters("left");
+          var rightEye = vrDisplay.getEyeParameters("right");
+
+          webglCanvas.width = Math.max(leftEye.renderWidth, rightEye.renderWidth) * 2;
+          webglCanvas.height = Math.max(leftEye.renderHeight, rightEye.renderHeight);
+        } else {
+          webglCanvas.width = webglCanvas.offsetWidth * window.devicePixelRatio;
+          webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
+        }
+      }
+      window.addEventListener("resize", onResize, false);
+      onResize();
+
+      function renderEyeView (pose, eye) {
+        var orientation = pose.orientation;
+        var position = pose.position;
+        if (!orientation) { orientation = [0, 0, 0, 1]; }
+        if (!position) { position = [0, 0, 0]; }
+
+        mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
+
+        if (vrDisplay.stageParameters) {
+          // If the headset provides stageParameters use the
+          // sittingToStandingTransform to transform the pose into a space where
+          // the floor in the center of the users play space is the origin.
+          mat4.fromRotationTranslation(modelViewMat, orientation, position);
+          mat4.translate(modelViewMat, modelViewMat, eye.offset);
+          mat4.multiply(modelViewMat, modelViewMat, vrDisplay.stageParameters.sittingToStandingTransform);
+        } else {
+          // Otherwise you'll want to translate the view to compensate for the
+          // scene floor being at Y=0. Ideally this should match the user's
+          // height (you may want to make it configurable). For this demo we'll
+          // just assume all human beings are 1.65 meters (~5.4ft) tall.
+          vec3.add(offsetPosition, position, [0, 1.65, 0]);
+          mat4.fromRotationTranslation(modelViewMat, orientation, offsetPosition);
+          mat4.translate(modelViewMat, modelViewMat, eye.offset);
+        }
+
+        mat4.invert(modelViewMat, modelViewMat);
+
+        cubeIsland.render(projectionMat, modelViewMat, stats);
+      }
+
+      function onAnimationFrame (t) {
+        stats.begin();
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        if (vrDisplay && vrDisplay.isPresenting) {
+          vrDisplay.requestAnimationFrame(onAnimationFrame);
+
+          var pose = vrDisplay.getPose();
+
+          gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
+          renderEyeView(pose, vrDisplay.getEyeParameters("left"));
+
+          gl.viewport(webglCanvas.width * 0.5, 0, webglCanvas.width * 0.5, webglCanvas.height);
+          renderEyeView(pose, vrDisplay.getEyeParameters("right"));
+
+          vrDisplay.submitFrame(pose);
+        } else {
+          window.requestAnimationFrame(onAnimationFrame);
+
+          // No VRDisplay found or we're not presenting.
+          gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
+          mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+          mat4.identity(modelViewMat);
+          mat4.translate(modelViewMat, modelViewMat, [0, -1.65, 0]);
+          cubeIsland.render(projectionMat, modelViewMat, stats);
+
+          stats.renderOrtho();
+        }
+
+        stats.end();
+      }
+      window.requestAnimationFrame(onAnimationFrame);
+      })();
+    </script>
+  </body>
+</html>
