@@ -146,9 +146,15 @@ var VRSamplesUtil = (function() {
     return element;
   }
 
+  function removeButton(button) {
+    if (button && button.parentElement)
+      button.parentElement.removeChild(button);
+  }
+
   return {
     addError: addError,
     addInfo: addInfo,
-    addButton: addButton
+    addButton: addButton,
+    removeButton: removeButton
   };
 })();
