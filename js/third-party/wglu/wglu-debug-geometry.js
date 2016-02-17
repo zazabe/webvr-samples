@@ -49,7 +49,8 @@ var WGLUDebugGeometry = (function() {
   var DebugGeometry = function(gl) {
     this.gl = gl;
 
-    this.geomMat = mat4.create();
+    this.projMat = mat4.create();
+    this.viewMat = mat4.create();
 
     this.program = new WGLUProgram(gl);
     this.program.attachShaderSource(debugGeomVS, gl.VERTEX_SHADER);
@@ -128,6 +129,21 @@ var WGLUDebugGeometry = (function() {
 
     this.cubeIndexCount = indices.length - this.cubeIndexOffset;
 
+    //
+    // Rect geometry
+    //
+    this.rectIndexOffset = indices.length;
+
+    idx = verts.length / 3.0;
+    indices.push(idx, idx+1, idx+2, idx+3, idx);
+
+    verts.push(0, 0, 0);
+    verts.push(1, 0, 0);
+    verts.push(1, 1, 0);
+    verts.push(0, 1, 0);
+
+    this.rectIndexCount = indices.length - this.rectIndexOffset;
+
     this.vertBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
@@ -135,7 +151,7 @@ var WGLUDebugGeometry = (function() {
     this.indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-  }
+  };
 
   DebugGeometry.prototype.bind = function(projectionMat, modelViewMat) {
     var gl = this.gl;
@@ -153,7 +169,13 @@ var WGLUDebugGeometry = (function() {
     gl.enableVertexAttribArray(program.attrib.texCoord);
 
     gl.vertexAttribPointer(program.attrib.position, 3, gl.FLOAT, false, 12, 0);
-  }
+  };
+
+  DebugGeometry.prototype.bindOrtho = function() {
+    mat4.ortho(this.projMat, 0, this.gl.canvas.width, this.gl.canvas.height, 0, 0.1, 1024);
+    mat4.identity(this.viewMat);
+    this.bind(this.projMat, this.viewMat);
+  };
 
   DebugGeometry.prototype.drawCube = function(position, size, color) {
     var gl = this.gl;
@@ -162,7 +184,16 @@ var WGLUDebugGeometry = (function() {
     gl.uniform3f(this.program.uniform.scale, size, size, size);
 
     gl.drawElements(gl.TRIANGLES, this.cubeIndexCount, gl.UNSIGNED_SHORT, this.cubeIndexOffset * 2.0);
-  }
+  };
+
+  DebugGeometry.prototype.drawRect = function(x, y, width, height, color) {
+    var gl = this.gl;
+    gl.uniform4fv(this.program.uniform.color, color);
+    gl.uniform3f(this.program.uniform.offset, x, y, -1);
+    gl.uniform3f(this.program.uniform.scale, width, height, 1);
+
+    gl.drawElements(gl.LINE_STRIP, this.rectIndexCount, gl.UNSIGNED_SHORT, this.rectIndexOffset * 2.0);
+  };
 
   return DebugGeometry;
 })();

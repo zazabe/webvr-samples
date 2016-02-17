@@ -31,6 +31,7 @@ found in the LICENSE file.
     <script src="js/third-party/gl-matrix-min.js"></script>
     <script src="js/third-party/webvr-polyfill.js"></script>
 
+    <script src="js/third-party/wglu/wglu-debug-geometry.js"></script>
     <script src="js/third-party/wglu/wglu-program.js"></script>
     <script src="js/third-party/wglu/wglu-stats.js"></script>
     <script src="js/third-party/wglu/wglu-texture.js"></script>
@@ -48,7 +49,8 @@ found in the LICENSE file.
       var vrDisplay = null;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
-      var offsetPosition = vec3.create();
+      var standingMat = mat4.create();
+      var standingPosition = vec3.create();
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -65,6 +67,7 @@ found in the LICENSE file.
       var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
 
       var stats = new WGLUStats(gl);
+      var debugGeom = new WGLUDebugGeometry(gl);
 
       // ================================
       // WebVR specific code begins here.
@@ -130,25 +133,32 @@ found in the LICENSE file.
         mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
 
         if (vrDisplay.stageParameters) {
+          vec3.transformMat4(standingPosition, position, vrDisplay.stageParameters.sittingToStandingTransform);
+
           // If the headset provides stageParameters use the
           // sittingToStandingTransform to transform the pose into a space where
           // the floor in the center of the users play space is the origin.
           mat4.fromRotationTranslation(modelViewMat, orientation, position);
           mat4.translate(modelViewMat, modelViewMat, eye.offset);
-          mat4.multiply(modelViewMat, modelViewMat, vrDisplay.stageParameters.sittingToStandingTransform);
+          //mat4.multiply(modelViewMat, vrDisplay.stageParameters.sittingToStandingTransform, modelViewMat);
+          mat4.invert(modelViewMat, modelViewMat);
         } else {
           // Otherwise you'll want to translate the view to compensate for the
           // scene floor being at Y=0. Ideally this should match the user's
           // height (you may want to make it configurable). For this demo we'll
           // just assume all human beings are 1.65 meters (~5.4ft) tall.
-          vec3.add(offsetPosition, position, [0, 1.65, 0]);
-          mat4.fromRotationTranslation(modelViewMat, orientation, offsetPosition);
+          vec3.add(standingPosition, position, [0, 1.65, 0]);
+          mat4.fromRotationTranslation(modelViewMat, orientation, standingPosition);
           mat4.translate(modelViewMat, modelViewMat, eye.offset);
+          mat4.invert(modelViewMat, modelViewMat);
         }
 
-        mat4.invert(modelViewMat, modelViewMat);
-
         cubeIsland.render(projectionMat, modelViewMat, stats);
+
+        debugGeom.bind(projectionMat, modelViewMat);
+        debugGeom.drawCube([0, 0, 0], 0.2, [1, 0, 0, 1]);
+        debugGeom.drawCube(position, 0.1, [0, 0, 1, 1]);
+        debugGeom.drawCube(standingPosition, 0.1, [0, 1, 0, 1]);
       }
 
       function onAnimationFrame (t) {
