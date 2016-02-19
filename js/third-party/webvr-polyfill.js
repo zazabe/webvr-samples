@@ -58,6 +58,11 @@ VRDisplay.prototype.requestPresent = function(layer) {
   this.layer_ = layer;
 
   return new Promise(function(resolve, reject) {
+    if (!self.capabilities.canPresent) {
+      reject(new Error("VRDisplay is not capable of presenting."));
+      return;
+    }
+
     self.waitingForPresent_ = false;
     if (layer && layer.source) {
       function onFullscreenChange() {
@@ -747,7 +752,7 @@ var Eye = {
  * VRDisplay based on mobile device parameters and DeviceMotion APIs.
  */
 function CardboardVRDisplay() {
-  this.displayName = "Carboard VRDisplay (webvr-polyfill)";
+  this.displayName = "Cardboard VRDisplay (webvr-polyfill)";
 
   this.capabilities.hasOrientation = true;
   this.capabilities.canPresent = true;
