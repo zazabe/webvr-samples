@@ -110,9 +110,10 @@ VRDisplay.prototype.beginPresent_ = function() {
     return;
 
   var gl = this.layer_.source.getContext("webgl");
-  if (!gl) {
+  if (!gl)
+    gl = this.layer_.source.getContext("experimental-webgl");
+  if (!gl)
     gl = this.layer_.source.getContext("webgl2");
-  }
 
   if (!gl)
     return; // Can't do distortion without a WebGL context.
