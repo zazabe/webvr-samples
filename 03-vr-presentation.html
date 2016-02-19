@@ -138,9 +138,10 @@ found in the LICENSE file.
             vrDisplay = displays[0];
 
             // Generally, you want to wait until VR support is confirmed and
-            // you know the user has a VRDisplay connected before adding UI
-            // that advertises VR features.
-            vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+            // you know the user has a VRDisplay capable of presenting connected
+            // before adding UI that advertises VR features.
+            if (vrDisplay.capabilities.canPresent)
+              vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
 
             // The UA may kick us out of VR present mode for any reason, so to
             // ensure we always know when we begin/end presenting we need to

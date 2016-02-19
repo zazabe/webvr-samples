@@ -101,7 +101,8 @@ found in the LICENSE file.
           if (displays.length > 0) {
             vrDisplay = displays[0];
 
-            VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+            if (vrDisplay.capabilities.canPresent)
+              vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
 
             // Only use preserveDrawingBuffer if we have an external display to
             // mirror to.

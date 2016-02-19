@@ -164,7 +164,8 @@ found in the LICENSE file.
             monoView = calculateMonoView(vrDisplay);
 
             initWebGL(vrDisplay.capabilities.hasExternalDisplay);
-            VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+            if (vrDisplay.capabilities.canPresent)
+              vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
           } else {
             initWebGL(false);
             VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);

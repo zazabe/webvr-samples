@@ -100,7 +100,8 @@ found in the LICENSE file.
               cubeIsland.resize(vrDisplay.stageParameters.sizeX, vrDisplay.stageParameters.sizeZ);
             }
 
-            VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+            if (vrDisplay.capabilities.canPresent)
+              vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
           } else {
             VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
           }
