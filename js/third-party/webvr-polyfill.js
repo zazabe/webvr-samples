@@ -140,6 +140,7 @@ VRDisplay.prototype.requestPresent = function(layer) {
       function onFullscreenChange() {
         var fullscreenElement = document.fullscreenElement ||
             document.webkitFullscreenElement ||
+            document.webkitFullScreenElement ||
             document.mozFullScreenElement ||
             document.msFullscreenElement;
 
@@ -180,6 +181,8 @@ VRDisplay.prototype.requestPresent = function(layer) {
         layer.source.requestFullscreen();
       else if (layer.source.webkitRequestFullscreen)
         layer.source.webkitRequestFullscreen();
+      else if (layer.source.webkitRequestFullScreen)
+        layer.source.webkitRequestFullScreen();
       else if (layer.source.mozRequestFullScreen)
         layer.source.mozRequestFullScreen();
       else if (layer.source.msRequestFullscreen)
@@ -208,6 +211,8 @@ VRDisplay.prototype.exitPresent = function() {
         document.exitFullscreen();
       else if (document.webkitExitFullscreen)
         document.webkitExitFullscreen();
+      else if (document.webkitExitFullScreen)
+        document.webkitExitFullScreen();
       else if (document.mozCancelFullScreen)
         document.mozCancelFullScreen();
       else if (document.msExitFullscreen)
