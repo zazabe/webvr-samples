@@ -17,6 +17,7 @@
 var CardboardDistorter = _dereq_('./cardboard-distorter.js');
 var DeviceInfo = _dereq_('./device-info.js');
 var Dpdb = _dereq_('./dpdb.js');
+var Util = _dereq_('./util.js');
 
 // Start at a higher number to reduce chance of conflict
 var nextDisplayId = 1000;
@@ -140,7 +141,6 @@ VRDisplay.prototype.requestPresent = function(layer) {
       function onFullscreenChange() {
         var fullscreenElement = document.fullscreenElement ||
             document.webkitFullscreenElement ||
-            document.webkitFullScreenElement ||
             document.mozFullScreenElement ||
             document.msFullscreenElement;
 
@@ -181,13 +181,17 @@ VRDisplay.prototype.requestPresent = function(layer) {
         layer.source.requestFullscreen();
       else if (layer.source.webkitRequestFullscreen)
         layer.source.webkitRequestFullscreen();
-      else if (layer.source.webkitRequestFullScreen)
-        layer.source.webkitRequestFullScreen();
       else if (layer.source.mozRequestFullScreen)
         layer.source.mozRequestFullScreen();
       else if (layer.source.msRequestFullscreen)
         layer.source.msRequestFullscreen();
-      else
+      else if (Util.isIOS()) {
+        // *sigh* Just fake it.
+        self.isPresenting = true;
+        self.fireVRDisplayPresentChange_();
+        self.beginPresent_();
+        resolve();
+      } else
         self.waitingForPresent_ = false;
     }
 
@@ -211,8 +215,6 @@ VRDisplay.prototype.exitPresent = function() {
         document.exitFullscreen();
       else if (document.webkitExitFullscreen)
         document.webkitExitFullscreen();
-      else if (document.webkitExitFullScreen)
-        document.webkitExitFullScreen();
       else if (document.mozCancelFullScreen)
         document.mozCancelFullScreen();
       else if (document.msExitFullscreen)
@@ -324,7 +326,7 @@ module.exports.VRDevice = VRDevice;
 module.exports.HMDVRDevice = HMDVRDevice;
 module.exports.PositionSensorVRDevice = PositionSensorVRDevice;
 
-},{"./cardboard-distorter.js":2,"./device-info.js":6,"./dpdb.js":10}],2:[function(_dereq_,module,exports){
+},{"./cardboard-distorter.js":2,"./device-info.js":6,"./dpdb.js":10,"./util.js":18}],2:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
