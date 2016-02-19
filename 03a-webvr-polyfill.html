@@ -73,7 +73,7 @@ found in the LICENSE file.
 
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
-      var gl = webglCanvas.getContext("webgl");
+      var gl = webglCanvas.getContext("webgl", {antialias: false});
       gl.clearColor(0.1, 0.2, 0.3, 1.0);
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);

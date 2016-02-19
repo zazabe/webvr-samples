@@ -75,12 +75,16 @@ VRDisplay.prototype.getEyeParameters = function(whichEye) {
     return null;
   }
 
+  // Ideally should be higher than 1.0 to compensate for distortion. May be
+  // detrimental on fill-rate bound devices, though.
+  var overscale = 1.0;
+
   return {
     fieldOfView: fieldOfView,
     offset: offset,
     // TODO: Should be able to provide better values than these.
-    renderWidth: this.deviceInfo_.device.width * 0.5 * 1,
-    renderHeight: this.deviceInfo_.device.height * 1,
+    renderWidth: this.deviceInfo_.device.width * 0.5 * overscale,
+    renderHeight: this.deviceInfo_.device.height * overscale,
   };
 };
 
@@ -101,6 +105,10 @@ VRDisplay.prototype.onDeviceParamsUpdated_ = function(newParams) {
 };
 
 VRDisplay.prototype.beginPresent_ = function() {
+  // Provides a way to opt out of distortion
+  if (this.layer_.predistorted)
+    return;
+
   var gl = this.layer_.source.getContext("webgl");
   if (!gl) {
     gl = this.layer_.source.getContext("webgl2");
@@ -406,6 +414,8 @@ function CardboardDistorter(gl) {
   this.bufferHeight = gl.drawingBufferHeight;
 
   this.realBindFramebuffer = gl.bindFramebuffer;
+  this.realCanvasWidth = Object.getOwnPropertyDescriptor(gl.canvas.__proto__, 'width');
+  this.realCanvasHeight = Object.getOwnPropertyDescriptor(gl.canvas.__proto__, 'height');
 
   this.isPatched = false;
 
@@ -464,9 +474,6 @@ CardboardDistorter.prototype.onResize = function() {
   var gl = this.gl;
   var self = this;
 
-  this.bufferWidth = gl.drawingBufferWidth;
-  this.bufferHeight = gl.drawingBufferHeight;
-
   var glState = [
     gl.FRAMEBUFFER_BINDING,
     gl.RENDERBUFFER_BINDING,
@@ -479,7 +486,7 @@ CardboardDistorter.prototype.onResize = function() {
 
     gl.bindTexture(gl.TEXTURE_2D, self.renderTarget);
     gl.texImage2D(gl.TEXTURE_2D, 0, self.ctxAttribs.alpha ? gl.RGBA : gl.RGB,
-        gl.drawingBufferWidth, gl.drawingBufferHeight, 0,
+        self.bufferWidth, self.bufferHeight, 0,
         self.ctxAttribs.alpha ? gl.RGBA : gl.RGB, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -490,14 +497,14 @@ CardboardDistorter.prototype.onResize = function() {
     if (self.ctxAttribs.depth) {
       gl.bindRenderbuffer(gl.RENDERBUFFER, self.depthBuffer);
       gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16,
-          gl.drawingBufferWidth, gl.drawingBufferHeight);
+          self.bufferWidth, self.bufferHeight);
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, self.depthBuffer);
     }
 
     if (self.ctxAttribs.stencil) {
       gl.bindRenderbuffer(gl.RENDERBUFFER, self.stencilBuffer);
       gl.renderbufferStorage(gl.RENDERBUFFER, gl.GL_STENCIL_INDEX8,
-          gl.drawingBufferWidth, gl.drawingBufferHeight);
+          self.bufferWidth, self.bufferHeight);
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, self.stencilBuffer);
     }
 
@@ -514,8 +521,36 @@ CardboardDistorter.prototype.patch = function() {
   }
 
   var self = this;
+  var canvas = this.gl.canvas;
 
-  // TODO: Hook canvas height and width with onResize
+  canvas.width = screen.width * window.devicePixelRatio;
+  canvas.height = screen.height * window.devicePixelRatio;
+
+  Object.defineProperty(canvas, 'width', {
+    configurable: true,
+    enumerable: true,
+    get: function() {
+      return self.bufferWidth;
+    },
+    set: function(value) {
+      self.bufferWidth = value;
+      self.onResize();
+      //self.realCanvasWidth.call(this, screen.width);
+    }
+  });
+
+  Object.defineProperty(canvas, 'height', {
+    configurable: true,
+    enumerable: true,
+    get: function() {
+      return self.bufferHeight;
+    },
+    set: function(value) {
+      self.bufferHeight = value;
+      self.onResize();
+      //self.realCanvasWidth.call(this, screen.height);
+    }
+  });
 
   this.gl.bindFramebuffer = function(target, framebuffer) {
     // Silently make calls to bind the default framebuffer bind ours instead.
@@ -533,6 +568,12 @@ CardboardDistorter.prototype.unpatch = function() {
   }
 
   var gl = this.gl;
+  var canvas = this.gl.canvas;
+
+  Object.defineProperty(canvas, 'width', this.realCanvasWidth);
+  Object.defineProperty(canvas, 'height', this.realCanvasHeight);
+  canvas.width = this.bufferWidth;
+  canvas.height = this.bufferHeight;
 
   gl.bindFramebuffer = this.realBindFramebuffer;
   // Check to see if our fake backbuffer is bound and bind the real backbuffer
@@ -612,11 +653,6 @@ CardboardDistorter.prototype.submitFrame = function() {
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
   });
-
-  if (gl.drawingBufferWidth != this.bufferWidth ||
-      gl.drawingBufferHeight != this.bufferHeight) {
-    this.onResize();
-  }
 };
 
 /**
