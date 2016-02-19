@@ -224,7 +224,7 @@ found in the LICENSE file.
         } else {
           window.requestAnimationFrame(onAnimationFrame);
 
-          // No VRDisplay found or we're not presenting.
+          // No VRDisplay found.
           mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(modelViewMat);
           cubeSea.render(projectionMat, modelViewMat, stats);
