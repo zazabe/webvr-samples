@@ -14,18 +14,10 @@
  * limitations under the License.
  */
 
-var CardboardDistorter = _dereq_('./cardboard-distorter.js');
-var DeviceInfo = _dereq_('./device-info.js');
-var Dpdb = _dereq_('./dpdb.js');
 var Util = _dereq_('./util.js');
 
 // Start at a higher number to reduce chance of conflict
 var nextDisplayId = 1000;
-
-var Eye = {
-  LEFT: 'left',
-  RIGHT: 'right'
-};
 
 /**
  * The base class for all VR displays.
@@ -38,8 +30,9 @@ function VRDisplay() {
   this.isPresenting = false;
   this.capabilities = {
     hasPosition: false,
-    hasOrientation: true,
-    hasExternalDisplay: false
+    hasOrientation: false,
+    hasExternalDisplay: false,
+    canPresent: false
   };
   this.stageParameters = null;
 
@@ -50,44 +43,7 @@ function VRDisplay() {
   this.fullscreenEventTarget_ = null;
   this.fullscreenChangeHandler_ = null;
   this.fullscreenErrorHandler_ = null;
-
-  this.distorter_ = null;
-
-  this.dpdb_ = new Dpdb(true, this.onDeviceParamsUpdated_.bind(this));
-  this.deviceInfo_ = new DeviceInfo(this.dpdb_.getDeviceParams());
-
-  // TODO: How to handle viewer selection?
-  /*this.deviceInfo.viewer = DeviceInfo.Viewers[this.viewerSelector.selectedKey];
-  console.log('Using the %s viewer.', this.getViewer().label);*/
 }
-
-VRDisplay.prototype.getEyeParameters = function(whichEye) {
-  var offset = [this.deviceInfo_.viewer.interLensDistance * 0.5, 0.0, 0.0];
-  var fieldOfView;
-
-  // TODO: FoV can be a little expensive to compute. Cache when device params change.
-  if (whichEye == Eye.LEFT) {
-    offset[0] *= -1.0;
-    fieldOfView = this.deviceInfo_.getFieldOfViewLeftEye();
-  } else if (whichEye == Eye.RIGHT) {
-    fieldOfView = this.deviceInfo_.getFieldOfViewRightEye();
-  } else {
-    console.error('Invalid eye provided: %s', whichEye);
-    return null;
-  }
-
-  // Ideally should be higher than 1.0 to compensate for distortion. May be
-  // detrimental on fill-rate bound devices, though.
-  var overscale = 1.0;
-
-  return {
-    fieldOfView: fieldOfView,
-    offset: offset,
-    // TODO: Should be able to provide better values than these.
-    renderWidth: this.deviceInfo_.device.width * 0.5 * overscale,
-    renderHeight: this.deviceInfo_.device.height * overscale,
-  };
-};
 
 VRDisplay.prototype.requestAnimationFrame = function(callback) {
   return window.requestAnimationFrame(callback);
@@ -95,40 +51,6 @@ VRDisplay.prototype.requestAnimationFrame = function(callback) {
 
 VRDisplay.prototype.cancelAnimationFrame = function(id) {
   return window.cancelAnimationFrame(id);
-};
-
-VRDisplay.prototype.onDeviceParamsUpdated_ = function(newParams) {
-  console.log('DPDB reported that device params were updated.');
-  this.deviceInfo_.updateDeviceParams(newParams);
-
-  if (this.distorter_)
-    this.distorter.updateDeviceInfo(this.deviceInfo_);
-};
-
-VRDisplay.prototype.beginPresent_ = function() {
-  // Provides a way to opt out of distortion
-  if (this.layer_.predistorted)
-    return;
-
-  var gl = this.layer_.source.getContext("webgl");
-  if (!gl)
-    gl = this.layer_.source.getContext("experimental-webgl");
-  if (!gl)
-    gl = this.layer_.source.getContext("webgl2");
-
-  if (!gl)
-    return; // Can't do distortion without a WebGL context.
-
-  // Create a new distorter for the target context
-  this.distorter_ = new CardboardDistorter(gl);
-  this.distorter_.updateDeviceInfo(this.deviceInfo_);
-};
-
-VRDisplay.prototype.endPresent_ = function() {
-  if (this.distorter_) {
-    this.distorter_.destroy();
-    this.distorter_ = null;
-  }
 };
 
 VRDisplay.prototype.requestPresent = function(layer) {
@@ -234,12 +156,6 @@ VRDisplay.prototype.getLayers = function() {
   return null;
 };
 
-VRDisplay.prototype.submitFrame = function(pose) {
-  if (this.distorter_) {
-    this.distorter_.submitFrame();
-  }
-};
-
 VRDisplay.prototype.fireVRDisplayPresentChange_ = function() {
   var event = new CustomEvent('vrdisplaypresentchange', { 'vrdisplay': this });
   window.dispatchEvent(event);
@@ -294,6 +210,18 @@ VRDisplay.prototype.removeFullscreenListeners_ = function() {
   this.fullscreenErrorHandler_ = null;
 };
 
+VRDisplay.prototype.beginPresent_ = function() {
+  // Override to add custom behavior when presentation begins
+};
+
+VRDisplay.prototype.endPresent_ = function() {
+  // Override to add custom behavior when presentation ends
+};
+
+VRDisplay.prototype.submitFrame = function(pose) {
+  // Override to add custom behavior for frame submission
+};
+
 /*
  * Deprecated classes
  */
@@ -326,7 +254,7 @@ module.exports.VRDevice = VRDevice;
 module.exports.HMDVRDevice = HMDVRDevice;
 module.exports.PositionSensorVRDevice = PositionSensorVRDevice;
 
-},{"./cardboard-distorter.js":2,"./device-info.js":6,"./dpdb.js":10,"./util.js":18}],2:[function(_dereq_,module,exports){
+},{"./util.js":18}],2:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -342,6 +270,7 @@ module.exports.PositionSensorVRDevice = PositionSensorVRDevice;
  * limitations under the License.
  */
 
+var Util = _dereq_('./util.js');
 var WGLUPreserveGLState = _dereq_('./deps/wglu-preserve-state.js');
 
 function lerp(a, b, t) {
@@ -531,8 +460,8 @@ CardboardDistorter.prototype.patch = function() {
   var self = this;
   var canvas = this.gl.canvas;
 
-  canvas.width = screen.width * window.devicePixelRatio;
-  canvas.height = screen.height * window.devicePixelRatio;
+  canvas.width = Util.getScreenWidth();
+  canvas.height = Util.getScreenHeight();
 
   Object.defineProperty(canvas, 'width', {
     configurable: true,
@@ -543,7 +472,6 @@ CardboardDistorter.prototype.patch = function() {
     set: function(value) {
       self.bufferWidth = value;
       self.onResize();
-      //self.realCanvasWidth.call(this, screen.width);
     }
   });
 
@@ -556,7 +484,6 @@ CardboardDistorter.prototype.patch = function() {
     set: function(value) {
       self.bufferHeight = value;
       self.onResize();
-      //self.realCanvasWidth.call(this, screen.height);
     }
   });
 
@@ -789,9 +716,9 @@ CardboardDistorter.prototype.computeMeshIndices_ = function(width, height) {
 }
 
 module.exports = CardboardDistorter;
-},{"./deps/wglu-preserve-state.js":5}],3:[function(_dereq_,module,exports){
+},{"./deps/wglu-preserve-state.js":5,"./util.js":18}],3:[function(_dereq_,module,exports){
 /*
- * Copyright 2015 Google Inc. All Rights Reserved.
+ * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -804,11 +731,12 @@ module.exports = CardboardDistorter;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var HMDVRDevice = _dereq_('./base.js').HMDVRDevice;
 
-// Constants from vrtoolkit: https://github.com/googlesamples/cardboard-java.
-var DEFAULT_INTERPUPILLARY_DISTANCE = 0.06;
-var DEFAULT_FIELD_OF_VIEW = 40;
+var CardboardDistorter = _dereq_('./cardboard-distorter.js');
+var DeviceInfo = _dereq_('./device-info.js');
+var Dpdb = _dereq_('./dpdb/dpdb.js');
+var FusionPoseSensor = _dereq_('./fusion-pose-sensor.js');
+var VRDisplay = _dereq_('./base.js').VRDisplay;
 
 var Eye = {
   LEFT: 'left',
@@ -816,130 +744,119 @@ var Eye = {
 };
 
 /**
- * The HMD itself, providing rendering parameters.
+ * VRDisplay based on mobile device parameters and DeviceMotion APIs.
  */
-function CardboardHMDVRDevice() {
-  // From com/google/vrtoolkit/cardboard/FieldOfView.java.
-  this.setMonocularFieldOfView_(DEFAULT_FIELD_OF_VIEW);
-  // Set display constants.
-  this.setInterpupillaryDistance(DEFAULT_INTERPUPILLARY_DISTANCE);
+function CardboardVRDisplay() {
+  this.displayName = "Carboard VRDisplay (webvr-polyfill)";
+
+  this.capabilities.hasOrientation = true;
+  this.capabilities.canPresent = true;
+
+  // "Private" members.
+  this.poseSensor_ = new FusionPoseSensor();
+  this.distorter_ = null;
+
+  this.dpdb_ = new Dpdb(true, this.onDeviceParamsUpdated_.bind(this));
+  this.deviceInfo_ = new DeviceInfo(this.dpdb_.getDeviceParams());
+
+  // TODO: How to handle viewer selection?
+  /*this.deviceInfo.viewer = DeviceInfo.Viewers[this.viewerSelector.selectedKey];
+  console.log('Using the %s viewer.', this.getViewer().label);*/
 }
-CardboardHMDVRDevice.prototype = new HMDVRDevice();
+CardboardVRDisplay.prototype = new VRDisplay();
 
-CardboardHMDVRDevice.prototype.getEyeParameters = function(whichEye) {
-  var eyeTranslation;
+CardboardVRDisplay.prototype.getPose = function() {
+  // TODO: Technically this should retain it's value for the duration of a frame
+  // but I doubt that's practical to do in javascript.
+  return this.getImmediatePose();
+};
+
+CardboardVRDisplay.prototype.getImmediatePose = function() {
+  return {
+    position: this.poseSensor_.getPosition(),
+    orientation: this.poseSensor_.getOrientation(),
+    linearVelocity: null,
+    linearAcceleration: null,
+    angularVelocity: null,
+    angularAcceleration: null
+  };
+};
+
+CardboardVRDisplay.prototype.resetPose = function() {
+  return this.poseSensor_.resetPose();
+};
+
+CardboardVRDisplay.prototype.getEyeParameters = function(whichEye) {
+  var offset = [this.deviceInfo_.viewer.interLensDistance * 0.5, 0.0, 0.0];
   var fieldOfView;
-  var renderRect;
 
+  // TODO: FoV can be a little expensive to compute. Cache when device params change.
   if (whichEye == Eye.LEFT) {
-    eyeTranslation = this.eyeTranslationLeft;
-    fieldOfView = this.fieldOfViewLeft;
-    renderRect = this.renderRectLeft;
+    offset[0] *= -1.0;
+    fieldOfView = this.deviceInfo_.getFieldOfViewLeftEye();
   } else if (whichEye == Eye.RIGHT) {
-    eyeTranslation = this.eyeTranslationRight;
-    fieldOfView = this.fieldOfViewRight;
-    renderRect = this.renderRectRight;
+    fieldOfView = this.deviceInfo_.getFieldOfViewRightEye();
   } else {
     console.error('Invalid eye provided: %s', whichEye);
     return null;
   }
+
+  // Ideally should be higher than 1.0 to compensate for distortion. May be
+  // detrimental on fill-rate bound devices, though.
+  var overscale = 1.0;
+
   return {
-    recommendedFieldOfView: fieldOfView,
-    eyeTranslation: eyeTranslation,
-    renderRect: renderRect
+    fieldOfView: fieldOfView,
+    offset: offset,
+    // TODO: Should be able to provide better values than these.
+    renderWidth: this.deviceInfo_.device.width * 0.5 * overscale,
+    renderHeight: this.deviceInfo_.device.height * overscale,
   };
 };
 
-/**
- * Sets the field of view for both eyes. This is according to WebVR spec:
- *
- * @param {FieldOfView} opt_fovLeft Field of view of the left eye.
- * @param {FieldOfView} opt_fovRight Field of view of the right eye.
- * @param {Number} opt_zNear The near plane.
- * @param {Number} opt_zFar The far plane.
- *
- * http://mozvr.github.io/webvr-spec/webvr.html#dom-hmdvrdevice-setfieldofviewleftfov-rightfov-znear-zfar
- */
-CardboardHMDVRDevice.prototype.setFieldOfView =
-    function(opt_fovLeft, opt_fovRight, opt_zNear, opt_zFar) {
-  if (opt_fovLeft) {
-    this.fieldOfViewLeft = opt_fovLeft;
-  }
-  if (opt_fovRight) {
-    this.fieldOfViewRight = opt_fovRight;
-  }
-  if (opt_zNear) {
-    this.zNear = opt_zNear;
-  }
-  if (opt_zFar) {
-    this.zFar = opt_zFar;
+CardboardVRDisplay.prototype.onDeviceParamsUpdated_ = function(newParams) {
+  console.log('DPDB reported that device params were updated.');
+  this.deviceInfo_.updateDeviceParams(newParams);
+
+  if (this.distorter_)
+    this.distorter.updateDeviceInfo(this.deviceInfo_);
+};
+
+CardboardVRDisplay.prototype.beginPresent_ = function() {
+  // Provides a way to opt out of distortion
+  if (this.layer_.predistorted)
+    return;
+
+  var gl = this.layer_.source.getContext("webgl");
+  if (!gl)
+    gl = this.layer_.source.getContext("experimental-webgl");
+  if (!gl)
+    gl = this.layer_.source.getContext("webgl2");
+
+  if (!gl)
+    return; // Can't do distortion without a WebGL context.
+
+  // Create a new distorter for the target context
+  this.distorter_ = new CardboardDistorter(gl);
+  this.distorter_.updateDeviceInfo(this.deviceInfo_);
+};
+
+CardboardVRDisplay.prototype.endPresent_ = function() {
+  if (this.distorter_) {
+    this.distorter_.destroy();
+    this.distorter_ = null;
   }
 };
 
-
-/**
- * Changes the interpupillary distance of the rendered scene. This is useful for
- * changing Cardboard viewers.
- *
- * Possibly a useful addition to the WebVR spec?
- *
- * @param {Number} ipd Distance between eyes.
- */
-CardboardHMDVRDevice.prototype.setInterpupillaryDistance = function(ipd) {
-  this.eyeTranslationLeft = {
-    x: ipd * -0.5,
-    y: 0,
-    z: 0
-  };
-  this.eyeTranslationRight = {
-    x: ipd * 0.5,
-    y: 0,
-    z: 0
-  };
-};
-
-
-/**
- * Changes the render rect (ie. viewport) where each eye is rendered. This is
- * useful for changing Cardboard viewers.
- *
- * Possibly a useful addition to the WebVR spec?
- *
- * @param {Rect} opt_rectLeft Viewport for left eye.
- * @param {Rect} opt_rectRight Viewport for right eye.
- */
-CardboardHMDVRDevice.prototype.setRenderRect = function(opt_rectLeft, opt_rectRight) {
-  if (opt_rectLeft) {
-    this.renderRectLeft = opt_rectLeft;
-  }
-  if (opt_rectRight) {
-    this.renderRectRight = opt_rectRight;
+CardboardVRDisplay.prototype.submitFrame = function(pose) {
+  if (this.distorter_) {
+    this.distorter_.submitFrame();
   }
 };
 
-/**
- * Sets a symmetrical field of view for both eyes, with just one angle.
- *
- * @param {Number} angle Angle in degrees of left, right, top and bottom for
- * both eyes.
- */
-CardboardHMDVRDevice.prototype.setMonocularFieldOfView_ = function(angle) {
-  this.setFieldOfView(this.createSymmetricalFieldOfView_(angle),
-                      this.createSymmetricalFieldOfView_(angle));
-};
+module.exports = CardboardVRDisplay;
 
-CardboardHMDVRDevice.prototype.createSymmetricalFieldOfView_ = function(angle) {
-  return {
-    upDegrees: angle,
-    downDegrees: angle,
-    leftDegrees: angle,
-    rightDegrees: angle
-  };
-};
-
-module.exports = CardboardHMDVRDevice;
-
-},{"./base.js":1}],4:[function(_dereq_,module,exports){
+},{"./base.js":1,"./cardboard-distorter.js":2,"./device-info.js":6,"./dpdb/dpdb.js":10,"./fusion-pose-sensor.js":11}],4:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1677,37 +1594,6 @@ var HMDVRDevice = _dereq_('./base.js').HMDVRDevice;
 var PositionSensorVRDevice = _dereq_('./base.js').PositionSensorVRDevice;
 
 /**
- * Wraps a PositionSensorVRDevice and exposes it as a
- * VRDisplay
- */
-function VRDeviceDisplay(positionDevice) {
-  this.positionDevice = positionDevice;
-
-  this.displayName = positionDevice.deviceName;
-}
-VRDeviceDisplay.prototype = new VRDisplay();
-
-VRDeviceDisplay.prototype.getPose = function() {
-  var state = this.positionDevice.getState();
-  return {
-    position: state.position ? new Float32Array([state.position.x, state.position.y, state.position.z]) : null,
-    orientation: state.orientation ? new Float32Array([state.orientation.x, state.orientation.y, state.orientation.z, state.orientation.w]) : null,
-    linearVelocity: null,
-    linearAcceleration: null,
-    angularVelocity: null,
-    angularAcceleration: null
-  };
-};
-
-VRDeviceDisplay.prototype.getImmediatePose = function() {
-  return this.getPose();
-};
-
-VRDeviceDisplay.prototype.resetPose = function() {
-  return this.positionDevice.resetSensor();
-};
-
-/**
  * Wraps a VRDisplay and exposes it as a HMDVRDevice
  */
 function VRDisplayHMDDevice(display) {
@@ -1776,7 +1662,6 @@ VRDisplayPositionSensorDevice.prototype.resetState = function() {
 };
 
 
-module.exports.VRDeviceDisplay = VRDeviceDisplay;
 module.exports.VRDisplayHMDDevice = VRDisplayHMDDevice;
 module.exports.VRDisplayPositionSensorDevice = VRDisplayPositionSensorDevice;
 
@@ -2820,7 +2705,7 @@ module.exports = DPDB_CACHE;
 // Offline cache of the DPDB, to be used until we load the online one (and
 // as a fallback in case we can't load the online one).
 var DPDB_CACHE = _dereq_('./dpdb-cache.js');
-var Util = _dereq_('./util.js');
+var Util = _dereq_('../util.js');
 
 // Online DPDB URL.
 var ONLINE_DPDB_URL = 'https://storage.googleapis.com/cardboard-dpdb/dpdb.json';
@@ -2991,7 +2876,7 @@ function DeviceParams(params) {
 }
 
 module.exports = Dpdb;
-},{"./dpdb-cache.js":9,"./util.js":18}],11:[function(_dereq_,module,exports){
+},{"../util.js":18,"./dpdb-cache.js":9}],11:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -3006,8 +2891,6 @@ module.exports = Dpdb;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var PositionSensorVRDevice = _dereq_('./base.js').PositionSensorVRDevice;
-
 var ComplementaryFilter = _dereq_('./complementary-filter.js');
 var PosePredictor = _dereq_('./pose-predictor.js');
 var TouchPanner = _dereq_('./touch-panner.js');
@@ -3015,9 +2898,9 @@ var THREE = _dereq_('./three-math.js');
 var Util = _dereq_('./util.js');
 
 /**
- * The positional sensor, implemented using DeviceMotion APIs.
+ * The pose sensor, implemented using DeviceMotion APIs.
  */
-function FusionPositionSensorVRDevice() {
+function FusionPoseSensor() {
   this.deviceId = 'webvr-polyfill:fused';
   this.deviceName = 'VR Position Device (webvr-polyfill:fused)';
 
@@ -3048,23 +2931,16 @@ function FusionPositionSensorVRDevice() {
 
   this.isFirefoxAndroid = Util.isFirefoxAndroid();
   this.isIOS = Util.isIOS();
-}
-FusionPositionSensorVRDevice.prototype = new PositionSensorVRDevice();
 
-/**
- * Returns {orientation: {x,y,z,w}, position: null}.
- * Position is not supported since we can't do 6DOF.
- */
-FusionPositionSensorVRDevice.prototype.getState = function() {
-  return {
-    hasOrientation: true,
-    orientation: this.getOrientation(),
-    hasPosition: false,
-    position: null
-  }
+  this.orientationOut_ = new Float32Array(4);
+}
+
+FusionPoseSensor.prototype.getPosition = function() {
+  // This PoseSensor doesn't support position
+  return null;
 };
 
-FusionPositionSensorVRDevice.prototype.getOrientation = function() {
+FusionPoseSensor.prototype.getOrientation = function() {
   // Convert from filter space to the the same system used by the
   // deviceorientation event.
   var orientation = this.filter.getOrientation();
@@ -3089,21 +2965,26 @@ FusionPositionSensorVRDevice.prototype.getOrientation = function() {
     out.z = 0;
     out.normalize();
   }
-  return out;
+
+  this.orientationOut_[0] = out.x;
+  this.orientationOut_[1] = out.y;
+  this.orientationOut_[2] = out.z;
+  this.orientationOut_[3] = out.w;
+  return this.orientationOut_;
 };
 
-FusionPositionSensorVRDevice.prototype.resetSensor = function() {
+FusionPoseSensor.prototype.resetPose = function() {
   var euler = new THREE.Euler();
   euler.setFromQuaternion(this.filter.getOrientation());
   var yaw = euler.y;
-  console.log('resetSensor with yaw: %f', yaw);
+  console.log('resetPose with yaw: %f', yaw);
   this.resetQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -yaw);
   if (!WebVRConfig.TOUCH_PANNER_DISABLED) {
     this.touchPanner.resetSensor();
   }
 };
 
-FusionPositionSensorVRDevice.prototype.onDeviceMotionChange_ = function(deviceMotion) {
+FusionPoseSensor.prototype.onDeviceMotionChange_ = function(deviceMotion) {
   var accGravity = deviceMotion.accelerationIncludingGravity;
   var rotRate = deviceMotion.rotationRate;
   var timestampS = deviceMotion.timeStamp / 1000;
@@ -3135,12 +3016,12 @@ FusionPositionSensorVRDevice.prototype.onDeviceMotionChange_ = function(deviceMo
   this.previousTimestampS = timestampS;
 };
 
-FusionPositionSensorVRDevice.prototype.onScreenOrientationChange_ =
+FusionPoseSensor.prototype.onScreenOrientationChange_ =
     function(screenOrientation) {
   this.setScreenTransform_();
 };
 
-FusionPositionSensorVRDevice.prototype.setScreenTransform_ = function() {
+FusionPoseSensor.prototype.setScreenTransform_ = function() {
   this.worldToScreenQ.set(0, 0, 0, 1);
   switch (window.orientation) {
     case 0:
@@ -3158,9 +3039,9 @@ FusionPositionSensorVRDevice.prototype.setScreenTransform_ = function() {
 };
 
 
-module.exports = FusionPositionSensorVRDevice;
+module.exports = FusionPoseSensor;
 
-},{"./base.js":1,"./complementary-filter.js":4,"./pose-predictor.js":14,"./three-math.js":16,"./touch-panner.js":17,"./util.js":18}],12:[function(_dereq_,module,exports){
+},{"./complementary-filter.js":4,"./pose-predictor.js":14,"./three-math.js":16,"./touch-panner.js":17,"./util.js":18}],12:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5897,16 +5778,13 @@ module.exports = Util;
  * limitations under the License.
  */
 
-var CardboardHMDVRDevice = _dereq_('./cardboard-hmd-vr-device.js');
-//var OrientationPositionSensorVRDevice = require('./orientation-position-sensor-vr-device.js');
-var FusionPositionSensorVRDevice = _dereq_('./fusion-position-sensor-vr-device.js');
+var CardboardVRDisplay = _dereq_('./cardboard-vr-display.js');
 var MouseKeyboardPositionSensorVRDevice = _dereq_('./mouse-keyboard-position-sensor-vr-device.js');
 // Uncomment to add positional tracking via webcam.
 //var WebcamPositionSensorVRDevice = require('./webcam-position-sensor-vr-device.js');
 var VRDisplay = _dereq_('./base.js').VRDisplay;
 var HMDVRDevice = _dereq_('./base.js').HMDVRDevice;
 var PositionSensorVRDevice = _dereq_('./base.js').PositionSensorVRDevice;
-var VRDeviceDisplay = _dereq_('./display-wrappers.js').VRDeviceDisplay;
 var VRDisplayHMDDevice = _dereq_('./display-wrappers.js').VRDisplayHMDDevice;
 var VRDisplayPositionSensorDevice = _dereq_('./display-wrappers.js').VRDisplayPositionSensorDevice;
 
@@ -5936,30 +5814,31 @@ WebVRPolyfill.prototype.populateDevices = function() {
   if (this.devicesPopulated) {
     return;
   }
-  var hmdDevice = null;
-  var positionDevice = null;
+  var vrDisplay = null;
   // Initialize our virtual VR devices.
   if (this.isCardboardCompatible()) {
-    hmdDevice = new CardboardHMDVRDevice();
-    this.devices.push(hmdDevice);
+    var vrDisplay = new CardboardVRDisplay();
+    this.displays.push(vrDisplay);
+
+    // For backwards compatibility
+    if (WebVRConfig.ENABLE_DEPRECATED_API) {
+      this.devices.push(new VRDisplayHMDDevice(vrDisplay));
+      this.devices.push(new VRDisplayPositionSensorDevice(vrDisplay));
+    }
   }
 
   // Polyfill using the right position sensor.
-  if (this.isMobile()) {
-    //this.devices.push(new OrientationPositionSensorVRDevice());
-    positionDevice = new FusionPositionSensorVRDevice();
-    this.devices.push(positionDevice);
-    this.displays.push(new VRDeviceDisplay(positionDevice));
-  } else {
+  // TODO: For the moment this is only available via the deprecated APIs.
+  // Should refactor them to be exposed as VRDisplays that are wrapped as
+  // VRDevices.
+  if (WebVRConfig.ENABLE_DEPRECATED_API && !this.isMobile()) {
     if (!WebVRConfig.MOUSE_KEYBOARD_CONTROLS_DISABLED) {
       positionDevice = new MouseKeyboardPositionSensorVRDevice();
       this.devices.push(positionDevice);
-      this.displays.push(new VRDeviceDisplay(positionDevice));
     }
     // Uncomment to add positional tracking via webcam.
     //positionDevice = new WebcamPositionSensorVRDevice();
     //this.devices.push(positionDevice);
-    //this.displays.push(new VRDeviceDisplay(positionDevice));
   }
 
   this.devicesPopulated = true;
@@ -6034,4 +5913,4 @@ WebVRPolyfill.prototype.isCardboardCompatible = function() {
 
 module.exports = WebVRPolyfill;
 
-},{"./base.js":1,"./cardboard-hmd-vr-device.js":3,"./display-wrappers.js":7,"./fusion-position-sensor-vr-device.js":11,"./mouse-keyboard-position-sensor-vr-device.js":13}]},{},[12]);
+},{"./base.js":1,"./cardboard-vr-display.js":3,"./display-wrappers.js":7,"./mouse-keyboard-position-sensor-vr-device.js":13}]},{},[12]);
