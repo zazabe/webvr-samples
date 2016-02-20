@@ -68,17 +68,11 @@ found in the LICENSE file.
       var debugGeom = null;
 
       function initWebGL(preserveDrawingBuffer) {
-        // Setting preserveDrawingBuffer to true prevents the canvas from being
-        // implicitly cleared when calling submitFrame or compositing the canvas
-        // on the document. For the simplest form of mirroring we want to create
-        // the canvas with that option enabled. Note that this may incur a
-        // performance penalty, as it may imply that additional copies of the
-        // canvas backbuffer need to be made. As a result, we ONLY want to set
-        // that if we know the VRDisplay has an external display, which is why
-        // we defer WebGL initialization until after we've gotten results back
-        // from navigator.getVRDisplays and know which device we'll be
-        // presenting with.
-        gl = webglCanvas.getContext("webgl", { preserveDrawingBuffer: preserveDrawingBuffer });
+        var glAttribs = {
+          antialias: false,
+          preserveDrawingBuffer: preserveDrawingBuffer
+        };
+        gl = webglCanvas.getContext("webgl", glAttribs);
         gl.clearColor(0.1, 0.2, 0.3, 1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.CULL_FACE);

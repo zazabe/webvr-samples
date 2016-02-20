@@ -69,7 +69,11 @@ found in the LICENSE file.
         // we defer WebGL initialization until after we've gotten results back
         // from navigator.getVRDisplays and know which device we'll be
         // presenting with.
-        gl = webglCanvas.getContext("webgl", { preserveDrawingBuffer: preserveDrawingBuffer });
+        var glAttribs = {
+          antialias: false,
+          preserveDrawingBuffer: preserveDrawingBuffer
+        };
+        gl = webglCanvas.getContext("webgl", glAttribs);
         gl.clearColor(0.1, 0.2, 0.3, 1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.enable(gl.CULL_FACE);
