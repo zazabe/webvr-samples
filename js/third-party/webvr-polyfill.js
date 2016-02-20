@@ -541,6 +541,7 @@ CardboardDistorter.prototype.submitFrame = function() {
     gl.SCISSOR_TEST,
     gl.STENCIL_TEST,
     gl.COLOR_WRITEMASK,
+    gl.COLOR_CLEAR_VALUE,
     gl.VIEWPORT,
 
     gl.FRAMEBUFFER_BINDING,
