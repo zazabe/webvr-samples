@@ -52,7 +52,11 @@ found in the LICENSE file.
 
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
-      var gl = webglCanvas.getContext("webgl", {antialias: false});
+      var glAttribs = {
+        // Disable antialiasing on mobile devices for performance reasons.
+        antialias: !VRSamplesUtil.isMobile()
+      };
+      var gl = webglCanvas.getContext("webgl", glAttribs);
       gl.clearColor(0.1, 0.2, 0.3, 1.0); // Non-black makes debugging easier.
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);
@@ -91,6 +95,10 @@ found in the LICENSE file.
           // select which display they wish to use.
           if (displays.length > 0) {
             vrDisplay = displays[0];
+
+            // Being able to re-center your view is a useful thing in VR. It's
+            // good practice to provide your users with a simple way to do so.
+            VRSamplesUtil.addButton("Reset Pose", null, function() { vrDisplay.resetPose(); });
           } else {
             VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
           }

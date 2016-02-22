@@ -6,6 +6,12 @@ var VRSamplesUtil = (function() {
 
   "use strict";
 
+  // Lifted from the WebVR Polyfill
+  function isMobile() {
+    return /Android/i.test(navigator.userAgent) ||
+      /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
   function getMessageContainer() {
     var messageContainer = document.getElementById("vr-sample-message-container");
     if (!messageContainer) {
@@ -134,6 +140,7 @@ var VRSamplesUtil = (function() {
   }
 
   return {
+    isMobile: isMobile,
     addError: addError,
     addInfo: addInfo,
     addButton: addButton,

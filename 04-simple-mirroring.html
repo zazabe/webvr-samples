@@ -47,6 +47,7 @@ found in the LICENSE file.
       var vrDisplay = null;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
+      var vrPresentButton = null;
 
       // ================================
       // WebVR specific code begins here.
@@ -70,7 +71,7 @@ found in the LICENSE file.
         // from navigator.getVRDisplays and know which device we'll be
         // presenting with.
         var glAttribs = {
-          antialias: false,
+          antialias: !VRSamplesUtil.isMobile(),
           preserveDrawingBuffer: preserveDrawingBuffer
         };
         gl = webglCanvas.getContext("webgl", glAttribs);
@@ -90,23 +91,45 @@ found in the LICENSE file.
       }
 
       function onVRRequestPresent () {
-        // This can only be called in response to a user gesture.
         vrDisplay.requestPresent({ source: webglCanvas }).then(function () {
-          // Once we begin presenting, the canvas should be resized to the
-          // recommended dimensions for the display.
-          onResize();
         }, function () {
           VRSamplesUtil.addError("requestPresent failed.", 2000);
         });
+      }
+
+      function onVRExitPresent () {
+        vrDisplay.exitPresent().then(function () {
+        }, function () {
+          VRSamplesUtil.addError("exitPresent failed.", 2000);
+        });
+      }
+
+      function onVRPresentChange () {
+        onResize();
+
+        if (vrDisplay.isPresenting) {
+          if (vrDisplay.capabilities.hasExternalDisplay) {
+            VRSamplesUtil.removeButton(vrPresentButton);
+            vrPresentButton = VRSamplesUtil.addButton("Exit VR", "media/icons/cardboard64.png", onVRExitPresent);
+          }
+        } else {
+          if (vrDisplay.capabilities.hasExternalDisplay) {
+            VRSamplesUtil.removeButton(vrPresentButton);
+            vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+          }
+        }
       }
 
       if (navigator.getVRDisplays) {
         navigator.getVRDisplays().then(function (displays) {
           if (displays.length > 0) {
             vrDisplay = displays[0];
+            VRSamplesUtil.addButton("Reset Pose", null, function() { vrDisplay.resetPose(); });
 
             if (vrDisplay.capabilities.canPresent)
               vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+
+            window.addEventListener('vrdisplaypresentchange', onVRPresentChange, false);
 
             // Only use preserveDrawingBuffer if we have an external display to
             // mirror to.

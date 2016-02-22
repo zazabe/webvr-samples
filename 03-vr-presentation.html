@@ -69,7 +69,10 @@ found in the LICENSE file.
 
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
-      var gl = webglCanvas.getContext("webgl", {antialias: false});
+      var glAttribs = {
+        antialias: !VRSamplesUtil.isMobile()
+      };
+      var gl = webglCanvas.getContext("webgl", glAttribs);
       gl.clearColor(0.1, 0.2, 0.3, 1.0);
       gl.enable(gl.DEPTH_TEST);
       gl.enable(gl.CULL_FACE);
@@ -117,7 +120,7 @@ found in the LICENSE file.
 
             // On devices with an external display the UA may not provide a way
             // to exit VR presentation mode, so we should provide one ourselves.
-            removeButton(vrPresentButton);
+            VRSamplesUtil.removeButton(vrPresentButton);
             vrPresentButton = VRSamplesUtil.addButton("Exit VR", "media/icons/cardboard64.png", onVRExitPresent);
           }
         } else {
@@ -126,7 +129,7 @@ found in the LICENSE file.
           if (vrDisplay.capabilities.hasExternalDisplay) {
             presentingMessage.style.display = "";
 
-            removeButton(vrPresentButton);
+            VRSamplesUtil.removeButton(vrPresentButton);
             vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
           }
         }
@@ -136,6 +139,7 @@ found in the LICENSE file.
         navigator.getVRDisplays().then(function (displays) {
           if (displays.length > 0) {
             vrDisplay = displays[0];
+            VRSamplesUtil.addButton("Reset Pose", null, function() { vrDisplay.resetPose(); });
 
             // Generally, you want to wait until VR support is confirmed and
             // you know the user has a VRDisplay capable of presenting connected

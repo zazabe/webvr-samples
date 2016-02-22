@@ -50,6 +50,7 @@ found in the LICENSE file.
       var modelViewMat = mat4.create();
       var standingMat = mat4.create();
       var standingPosition = vec3.create();
+      var vrPresentButton = null;
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -64,7 +65,7 @@ found in the LICENSE file.
 
       function initWebGL(preserveDrawingBuffer) {
         var glAttribs = {
-          antialias: false,
+          antialias: !VRSamplesUtil.isMobile(),
           preserveDrawingBuffer: preserveDrawingBuffer
         };
         gl = webglCanvas.getContext("webgl", glAttribs);
@@ -94,14 +95,33 @@ found in the LICENSE file.
       // ================================
 
       function onVRRequestPresent () {
-        // This can only be called in response to a user gesture.
         vrDisplay.requestPresent({ source: webglCanvas }).then(function () {
-          // Once we begin presenting, the canvas should be resized to the
-          // recommended dimensions for the display.
-          onResize();
         }, function () {
           VRSamplesUtil.addError("requestPresent failed.", 2000);
         });
+      }
+
+      function onVRExitPresent () {
+        vrDisplay.exitPresent().then(function () {
+        }, function () {
+          VRSamplesUtil.addError("exitPresent failed.", 2000);
+        });
+      }
+
+      function onVRPresentChange () {
+        onResize();
+
+        if (vrDisplay.isPresenting) {
+          if (vrDisplay.capabilities.hasExternalDisplay) {
+            VRSamplesUtil.removeButton(vrPresentButton);
+            vrPresentButton = VRSamplesUtil.addButton("Exit VR", "media/icons/cardboard64.png", onVRExitPresent);
+          }
+        } else {
+          if (vrDisplay.capabilities.hasExternalDisplay) {
+            VRSamplesUtil.removeButton(vrPresentButton);
+            vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+          }
+        }
       }
 
       if (navigator.getVRDisplays) {
@@ -115,10 +135,17 @@ found in the LICENSE file.
               // If we have stageParameters use that to resize our scene to
               // match the users available space more closely.
               cubeIsland.resize(vrDisplay.stageParameters.sizeX, vrDisplay.stageParameters.sizeZ);
+            } else {
+              VRSamplesUtil.addInfo("VRDisplay did not report stageParameters", 3000);
+              // Resetting the pose in standing space isn't useful, because the
+              // headset should always be relative to the physical room.
+              VRSamplesUtil.addButton("Reset Pose", null, function() { vrDisplay.resetPose(); });
             }
 
             if (vrDisplay.capabilities.canPresent)
               vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+
+            window.addEventListener('vrdisplaypresentchange', onVRPresentChange, false);
           } else {
             initWebGL(false);
             VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
