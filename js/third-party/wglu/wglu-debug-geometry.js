@@ -26,14 +26,12 @@ var WGLUDebugGeometry = (function() {
 
   var debugGeomVS = [
     "uniform mat4 projectionMat;",
-    "uniform mat4 modelViewMat;",
+    "uniform mat4 viewMat;",
+    "uniform mat4 modelMat;",
     "attribute vec3 position;",
 
-    "uniform vec3 offset;",
-    "uniform vec3 scale;",
-
     "void main() {",
-    "  gl_Position = projectionMat * modelViewMat * vec4( (position * scale) + offset, 1.0 );",
+    "  gl_Position = projectionMat * viewMat * modelMat * vec4( position, 1.0 );",
     "}",
   ].join("\n");
 
@@ -51,6 +49,7 @@ var WGLUDebugGeometry = (function() {
 
     this.projMat = mat4.create();
     this.viewMat = mat4.create();
+    this.modelMat = mat4.create();
 
     this.program = new WGLUProgram(gl);
     this.program.attachShaderSource(debugGeomVS, gl.VERTEX_SHADER);
@@ -153,14 +152,14 @@ var WGLUDebugGeometry = (function() {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
   };
 
-  DebugGeometry.prototype.bind = function(projectionMat, modelViewMat) {
+  DebugGeometry.prototype.bind = function(projectionMat, viewMat) {
     var gl = this.gl;
     var program = this.program;
 
     program.use();
 
     gl.uniformMatrix4fv(program.uniform.projectionMat, false, projectionMat);
-    gl.uniformMatrix4fv(program.uniform.modelViewMat, false, modelViewMat);
+    gl.uniformMatrix4fv(program.uniform.viewMat, false, viewMat);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuffer);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
@@ -177,21 +176,36 @@ var WGLUDebugGeometry = (function() {
     this.bind(this.projMat, this.viewMat);
   };
 
-  DebugGeometry.prototype.drawCube = function(position, size, color) {
-    var gl = this.gl;
-    gl.uniform4fv(this.program.uniform.color, color);
-    gl.uniform3fv(this.program.uniform.offset, position);
-    gl.uniform3f(this.program.uniform.scale, size, size, size);
+  DebugGeometry.prototype._bindUniforms = function(orientation, position, scale, color) {
+    if (!position) { position = [0, 0, 0]; }
+    if (!orientation) { orientation = [0, 0, 0, 1]; }
+    if (!scale) { scale = [1, 1, 1]; }
+    if (!color) { color = [1, 0, 0, 1]; }
 
+    mat4.fromRotationTranslationScale(this.modelMat, orientation, position, scale);
+    this.gl.uniformMatrix4fv(this.program.uniform.modelMat, false, this.modelMat);
+    this.gl.uniform4fv(this.program.uniform.color, color);
+  };
+
+  DebugGeometry.prototype.drawCube = function(orientation, position, size, color) {
+    var gl = this.gl;
+
+    if (!size) { size = 1; }
+    this._bindUniforms(orientation, position, [size, size, size], color);
+    gl.drawElements(gl.TRIANGLES, this.cubeIndexCount, gl.UNSIGNED_SHORT, this.cubeIndexOffset * 2.0);
+  };
+
+  DebugGeometry.prototype.drawBox = function(orientation, position, scale, color) {
+    var gl = this.gl;
+
+    this._bindUniforms(orientation, position, scale, color);
     gl.drawElements(gl.TRIANGLES, this.cubeIndexCount, gl.UNSIGNED_SHORT, this.cubeIndexOffset * 2.0);
   };
 
   DebugGeometry.prototype.drawRect = function(x, y, width, height, color) {
     var gl = this.gl;
-    gl.uniform4fv(this.program.uniform.color, color);
-    gl.uniform3f(this.program.uniform.offset, x, y, -1);
-    gl.uniform3f(this.program.uniform.scale, width, height, 1);
 
+    this._bindUniforms(null, [x, y, -1], [width, height, 1], color);
     gl.drawElements(gl.LINE_STRIP, this.rectIndexCount, gl.UNSIGNED_SHORT, this.rectIndexOffset * 2.0);
   };
 

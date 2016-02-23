@@ -465,8 +465,8 @@ CardboardDistorter.prototype.patch = function() {
   var self = this;
   var canvas = this.gl.canvas;
 
-  canvas.width = Util.getScreenWidth();
-  canvas.height = Util.getScreenHeight();
+  canvas.width = Math.max(screen.width, screen.height) * window.devicePixelRatio; //Util.getScreenWidth();
+  canvas.height = Math.min(screen.width, screen.height) * window.devicePixelRatio;
 
   Object.defineProperty(canvas, 'width', {
     configurable: true,

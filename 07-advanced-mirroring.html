@@ -9,11 +9,11 @@ found in the LICENSE file.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-    <title>06 - Room Scale</title>
+    <title>07 - Advanced Mirroring</title>
 
     <!--
-      This sample demonstrates how to create scenes that align with the space
-      physically available to the user (when that information is available.)
+      This sample demonstrates how to display a different view of the scene on
+      an external monitor than is being viewed through the headset.
     -->
 
     <style>
@@ -41,15 +41,15 @@ found in the LICENSE file.
   <body>
     <canvas id="webgl-canvas"></canvas>
     <script>
-      /* global mat4, WGLUCubeIsland, WGLUTextureLoader, VRSamplesUtil */
+      /* global mat4, WGLUCubeSea, WGLUTextureLoader, VRSamplesUtil */
       (function () {
       "use strict";
 
       var vrDisplay = null;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
-      var standingMat = mat4.create();
       var standingPosition = vec3.create();
+
       var vrPresentButton = null;
 
       // ===================================================
@@ -58,43 +58,29 @@ found in the LICENSE file.
 
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
-      var gl = null;
-      var cubeIsland = null;
-      var stats = null;
-      var debugGeom = null;
+      var glAttribs = {
+        antialias: !VRSamplesUtil.isMobile()
+      };
+      var gl = webglCanvas.getContext("webgl", glAttribs);
+      gl.clearColor(0.1, 0.2, 0.3, 1.0);
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
 
-      function initWebGL(preserveDrawingBuffer) {
-        var glAttribs = {
-          antialias: !VRSamplesUtil.isMobile(),
-          preserveDrawingBuffer: preserveDrawingBuffer
-        };
-        gl = webglCanvas.getContext("webgl", glAttribs);
-        gl.clearColor(0.1, 0.2, 0.3, 1.0);
-        gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.CULL_FACE);
+      var textureLoader = new WGLUTextureLoader(gl);
+      var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
+      // Using cubeIsland for this sample because it's easier to see from a
+      // third person view.
+      var cubeIsland = new VRCubeIsland(gl, texture, 2, 2);
 
-        var textureLoader = new WGLUTextureLoader(gl);
-        var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
-
-        // If the VRDisplay doesn't have stageParameters we won't know
-        // how big the users play space. Construct a scene around a
-        // default space size like 2 meters by 2 meters as a placeholder.
-        cubeIsland = new VRCubeIsland(gl, texture, 2, 2);
-
-        stats = new WGLUStats(gl);
-        debugGeom = new WGLUDebugGeometry(gl);
-
-        // Wait until we have a WebGL context to resize and start rendering.
-        window.addEventListener("resize", onResize, false);
-        onResize();
-        window.requestAnimationFrame(onAnimationFrame);
-      }
+      var stats = new WGLUStats(gl);
+      var debugGeom = new WGLUDebugGeometry(gl);
 
       // ================================
       // WebVR specific code begins here.
       // ================================
 
       function onVRRequestPresent () {
+        // This can only be called in response to a user gesture.
         vrDisplay.requestPresent({ source: webglCanvas }).then(function () {
         }, function () {
           VRSamplesUtil.addError("requestPresent failed.", 2000);
@@ -128,31 +114,17 @@ found in the LICENSE file.
         navigator.getVRDisplays().then(function (displays) {
           if (displays.length > 0) {
             vrDisplay = displays[0];
-
-            initWebGL(true);
-
-            if (vrDisplay.stageParameters) {
-              // If we have stageParameters use that to resize our scene to
-              // match the users available space more closely.
-              cubeIsland.resize(vrDisplay.stageParameters.sizeX, vrDisplay.stageParameters.sizeZ);
-            } else {
-              VRSamplesUtil.addInfo("VRDisplay did not report stageParameters", 3000);
-              // Resetting the pose in standing space isn't useful, because the
-              // headset should always be relative to the physical room.
-              VRSamplesUtil.addButton("Reset Pose", null, function() { vrDisplay.resetPose(); });
-            }
+            VRSamplesUtil.addButton("Reset Pose", null, function() { vrDisplay.resetPose(); });
 
             if (vrDisplay.capabilities.canPresent)
               vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
 
             window.addEventListener('vrdisplaypresentchange', onVRPresentChange, false);
           } else {
-            initWebGL(false);
             VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
           }
         });
       } else {
-        initWebGL(false);
         VRSamplesUtil.addError("Your browser does not support WebVR. See <a href='http://webvr.info'>webvr.info</a> for assistance.");
       }
 
@@ -168,6 +140,8 @@ found in the LICENSE file.
           webglCanvas.height = webglCanvas.offsetHeight * window.devicePixelRatio;
         }
       }
+      window.addEventListener("resize", onResize, false);
+      onResize();
 
       function renderSceneView (pose, eye) {
         var orientation = pose.orientation;
@@ -180,35 +154,39 @@ found in the LICENSE file.
         else
           mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
 
-        if (vrDisplay.stageParameters) {
-          vec3.transformMat4(standingPosition, position, vrDisplay.stageParameters.sittingToStandingTransform);
-
-          // If the headset provides stageParameters use the
-          // sittingToStandingTransform to transform the pose into a space where
-          // the floor in the center of the users play space is the origin.
-          mat4.fromRotationTranslation(modelViewMat, orientation, position);
-          if (eye)
-            mat4.translate(modelViewMat, modelViewMat, eye.offset);
-          //mat4.multiply(modelViewMat, vrDisplay.stageParameters.sittingToStandingTransform, modelViewMat);
-          mat4.invert(modelViewMat, modelViewMat);
-        } else {
-          // Otherwise you'll want to translate the view to compensate for the
-          // scene floor being at Y=0. Ideally this should match the user's
-          // height (you may want to make it configurable). For this demo we'll
-          // just assume all human beings are 1.65 meters (~5.4ft) tall.
-          vec3.add(standingPosition, position, [0, 1.65, 0]);
-          mat4.fromRotationTranslation(modelViewMat, orientation, standingPosition);
-          if (eye)
-            mat4.translate(modelViewMat, modelViewMat, eye.offset);
-          mat4.invert(modelViewMat, modelViewMat);
-        }
+        // Move the pose position up so that it's not resting on the floor.
+        vec3.add(standingPosition, position, [0, 1.65, 0]);
+        mat4.fromRotationTranslation(modelViewMat, orientation, standingPosition);
+        if (eye)
+          mat4.translate(modelViewMat, modelViewMat, eye.offset);
+        mat4.invert(modelViewMat, modelViewMat);
 
         cubeIsland.render(projectionMat, modelViewMat, stats);
+      }
 
-        debugGeom.bind(projectionMat, modelViewMat);
-        debugGeom.drawCube(null, [0, 0, 0], 0.2, [1, 0, 0, 1]);
-        debugGeom.drawCube(orientation, position, 0.1, [0, 0, 1, 1]);
-        debugGeom.drawCube(null, standingPosition, 0.1, [0, 1, 0, 1]);
+      function renderSceneThirdPersonView (pose) {
+        gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
+        mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+        // Set up the camera in the back left corner of the island
+        mat4.identity(modelViewMat);
+        mat4.translate(modelViewMat, modelViewMat, [-2, 2.5, 2]);
+        mat4.rotateY(modelViewMat, modelViewMat, Math.PI * -0.25);
+        mat4.rotateX(modelViewMat, modelViewMat, Math.PI * -0.15);
+        mat4.invert(modelViewMat, modelViewMat);
+        cubeIsland.render(projectionMat, modelViewMat, stats);
+
+        if (pose) {
+          // Render a debug view of the headset
+          vec3.set(standingPosition, 0, 1.65, 0);
+          if (pose.position) {
+            vec3.add(standingPosition, standingPosition, pose.position);
+          }
+
+          debugGeom.bind(projectionMat, modelViewMat);
+          debugGeom.drawCube(pose.orientation, standingPosition, 0.2, [0, 1, 0, 1]);
+        }
+
+        stats.renderOrtho();
       }
 
       function onAnimationFrame (t) {
@@ -228,7 +206,17 @@ found in the LICENSE file.
             gl.viewport(webglCanvas.width * 0.5, 0, webglCanvas.width * 0.5, webglCanvas.height);
             renderSceneView(pose, vrDisplay.getEyeParameters("right"));
 
+            // VRDisplay.submitFrame
             vrDisplay.submitFrame(pose);
+
+            // If we have an external display we can render a different version
+            // of the scene entirely after calling submitFrame and it will be
+            // shown on the page. Depending on the content this can be expensive
+            // so this technique should only be used when it will not interfere
+            // with the performance of the VR rendering.
+            if (vrDisplay.hasExternalDisplay) {
+              renderSceneThirdPersonView(pose);
+            }
           } else {
             gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
             renderSceneView(pose, null);
@@ -237,17 +225,12 @@ found in the LICENSE file.
           window.requestAnimationFrame(onAnimationFrame);
 
           // No VRDisplay found.
-          gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-          mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
-          mat4.identity(modelViewMat);
-          mat4.translate(modelViewMat, modelViewMat, [0, -1.65, 0]);
-          cubeIsland.render(projectionMat, modelViewMat, stats);
-
-          stats.renderOrtho();
+          renderSceneThirdPersonView(null);
         }
 
         stats.end();
       }
+      window.requestAnimationFrame(onAnimationFrame);
       })();
     </script>
   </body>
