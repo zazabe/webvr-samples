@@ -9,7 +9,7 @@ found in the LICENSE file.
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
-    <title>06 - Room Scale</title>
+    <title>05 - Room Scale</title>
 
     <!--
       This sample demonstrates how to create scenes that align with the space
@@ -181,15 +181,13 @@ found in the LICENSE file.
           mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
 
         if (vrDisplay.stageParameters) {
-          vec3.transformMat4(standingPosition, position, vrDisplay.stageParameters.sittingToStandingTransform);
-
           // If the headset provides stageParameters use the
           // sittingToStandingTransform to transform the pose into a space where
           // the floor in the center of the users play space is the origin.
           mat4.fromRotationTranslation(modelViewMat, orientation, position);
+          mat4.multiply(modelViewMat, vrDisplay.stageParameters.sittingToStandingTransform, modelViewMat);
           if (eye)
             mat4.translate(modelViewMat, modelViewMat, eye.offset);
-          //mat4.multiply(modelViewMat, vrDisplay.stageParameters.sittingToStandingTransform, modelViewMat);
           mat4.invert(modelViewMat, modelViewMat);
         } else {
           // Otherwise you'll want to translate the view to compensate for the
@@ -206,9 +204,7 @@ found in the LICENSE file.
         cubeIsland.render(projectionMat, modelViewMat, stats);
 
         debugGeom.bind(projectionMat, modelViewMat);
-        debugGeom.drawCube(null, [0, 0, 0], 0.2, [1, 0, 0, 1]);
-        debugGeom.drawCube(orientation, position, 0.1, [0, 0, 1, 1]);
-        debugGeom.drawCube(null, standingPosition, 0.1, [0, 1, 0, 1]);
+        debugGeom.drawCube(orientation, position, 0.2, [0, 0, 1, 1]);
       }
 
       function onAnimationFrame (t) {
