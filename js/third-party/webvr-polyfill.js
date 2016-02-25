@@ -15,6 +15,7 @@
  */
 
 var Util = _dereq_('./util.js');
+var WakeLock = _dereq_('./wakelock.js');
 
 // Start at a higher number to reduce chance of conflict
 var nextDisplayId = 1000;
@@ -43,6 +44,8 @@ function VRDisplay() {
   this.fullscreenEventTarget_ = null;
   this.fullscreenChangeHandler_ = null;
   this.fullscreenErrorHandler_ = null;
+
+  this.wakelock_ = WakeLock.getWakeLock();
 }
 
 VRDisplay.prototype.requestAnimationFrame = function(callback) {
@@ -59,29 +62,28 @@ VRDisplay.prototype.requestPresent = function(layer) {
 
   return new Promise(function(resolve, reject) {
     if (!self.capabilities.canPresent) {
-      reject(new Error("VRDisplay is not capable of presenting."));
+      reject(new Error('VRDisplay is not capable of presenting.'));
       return;
     }
 
     self.waitingForPresent_ = false;
     if (layer && layer.source) {
       function onFullscreenChange() {
-        var fullscreenElement = document.fullscreenElement ||
-            document.webkitFullscreenElement ||
-            document.mozFullScreenElement ||
-            document.msFullscreenElement;
+        var fullscreenElement = Util.getFullscreenElement();
 
-        self.isPresenting = fullscreenElement == layer.source;
+        self.isPresenting = fullscreenElement === layer.source;
         self.fireVRDisplayPresentChange_();
         if (self.isPresenting) {
           if (screen.orientation && screen.orientation.lock)
-            screen.orientation.lock("landscape-primary");
+            screen.orientation.lock('landscape-primary');
+          self.wakelock_.request();
           self.waitingForPresent_ = false;
           self.beginPresent_();
           resolve();
         } else {
           if (screen.orientation && screen.orientation.unlock)
             screen.orientation.unlock();
+          self.wakelock_.release();
           self.endPresent_();
           self.removeFullscreenListeners_();
         }
@@ -95,36 +97,27 @@ VRDisplay.prototype.requestPresent = function(layer) {
         self.waitingForPresent_ = false;
         self.isPresenting = false;
 
-        reject(new Error("Unable to present."));
+        reject(new Error('Unable to present.'));
       }
 
       self.addFullscreenListeners_(layer.source,
           onFullscreenChange, onFullscreenError);
 
-      self.waitingForPresent_ = true;
-      // TODO: Spec says that requestFullscreen returns a promise, but that
-      // doesn't seem to be implemented anywhere just yet.
-      if (layer.source.requestFullscreen)
-        layer.source.requestFullscreen();
-      else if (layer.source.webkitRequestFullscreen)
-        layer.source.webkitRequestFullscreen();
-      else if (layer.source.mozRequestFullScreen)
-        layer.source.mozRequestFullScreen();
-      else if (layer.source.msRequestFullscreen)
-        layer.source.msRequestFullscreen();
-      else if (Util.isIOS()) {
+      if (Util.requestFullscreen(layer.source)) {
+        self.waitingForPresent_ = true;
+      } else if (Util.isIOS()) {
         // *sigh* Just fake it.
+        self.wakelock_.request();
         self.isPresenting = true;
         self.fireVRDisplayPresentChange_();
         self.beginPresent_();
         resolve();
-      } else
-        self.waitingForPresent_ = false;
+      }
     }
 
-    if (!self.waitingForPresent_) {
-      document.exitFullscreen();
-      reject(new Error("Unable to present."));
+    if (!self.waitingForPresent_ && !Util.isIOS()) {
+      Util.exitFullscreen();
+      reject(new Error('Unable to present.'));
     }
   });
 };
@@ -136,20 +129,14 @@ VRDisplay.prototype.exitPresent = function() {
 
   return new Promise(function(resolve, reject) {
     if (wasPresenting) {
-      // TODO: Spec says that exitFullscreen returns a promise, but that
-      // doesn't seem to be implemented anywhere just yet.
-      if (document.exitFullscreen)
-        document.exitFullscreen();
-      else if (document.webkitExitFullscreen)
-        document.webkitExitFullscreen();
-      else if (document.mozCancelFullScreen)
-        document.mozCancelFullScreen();
-      else if (document.msExitFullscreen)
-        document.msExitFullscreen();
+      if (!Util.exitFullscreen() && Util.isIOS()) {
+        self.wakelock_.release();
+        self.endPresent_();
+      }
 
       resolve();
     } else {
-      reject(new Error("Was not presenting to VRDisplay."));
+      reject(new Error('Was not presenting to VRDisplay.'));
     }
   });
 };
@@ -174,17 +161,17 @@ VRDisplay.prototype.addFullscreenListeners_ = function(element, changeHandler, e
   this.fullscreenErrorHandler_ = errorHandler;
 
   if (changeHandler) {
-    element.addEventListener("fullscreenchange", changeHandler, false);
-    element.addEventListener("webkitfullscreenchange", changeHandler, false);
-    element.addEventListener("mozfullscreenchange", changeHandler, false);
-    element.addEventListener("msfullscreenchange", changeHandler, false);
+    element.addEventListener('fullscreenchange', changeHandler, false);
+    element.addEventListener('webkitfullscreenchange', changeHandler, false);
+    element.addEventListener('mozfullscreenchange', changeHandler, false);
+    element.addEventListener('msfullscreenchange', changeHandler, false);
   }
 
   if (errorHandler) {
-    element.addEventListener("fullscreenerror", errorHandler, false);
-    element.addEventListener("webkitfullscreenerror", errorHandler, false);
-    element.addEventListener("mozfullscreenerror", errorHandler, false);
-    element.addEventListener("msfullscreenerror", errorHandler, false);
+    element.addEventListener('fullscreenerror', errorHandler, false);
+    element.addEventListener('webkitfullscreenerror', errorHandler, false);
+    element.addEventListener('mozfullscreenerror', errorHandler, false);
+    element.addEventListener('msfullscreenerror', errorHandler, false);
   }
 };
 
@@ -196,18 +183,18 @@ VRDisplay.prototype.removeFullscreenListeners_ = function() {
 
   if (this.fullscreenChangeHandler_) {
     var changeHandler = this.fullscreenChangeHandler_;
-    element.removeEventListener("fullscreenchange", changeHandler, false);
-    element.removeEventListener("webkitfullscreenchange", changeHandler, false);
-    element.removeEventListener("mozfullscreenchange", changeHandler, false);
-    element.removeEventListener("msfullscreenchange", changeHandler, false);
+    element.removeEventListener('fullscreenchange', changeHandler, false);
+    element.removeEventListener('webkitfullscreenchange', changeHandler, false);
+    element.removeEventListener('mozfullscreenchange', changeHandler, false);
+    element.removeEventListener('msfullscreenchange', changeHandler, false);
   }
 
   if (this.fullscreenErrorHandler_) {
     var errorHandler = this.fullscreenErrorHandler_;
-    element.removeEventListener("fullscreenerror", errorHandler, false);
-    element.removeEventListener("webkitfullscreenerror", errorHandler, false);
-    element.removeEventListener("mozfullscreenerror", errorHandler, false);
-    element.removeEventListener("msfullscreenerror", errorHandler, false);
+    element.removeEventListener('fullscreenerror', errorHandler, false);
+    element.removeEventListener('webkitfullscreenerror', errorHandler, false);
+    element.removeEventListener('mozfullscreenerror', errorHandler, false);
+    element.removeEventListener('msfullscreenerror', errorHandler, false);
   }
 
   this.fullscreenEventTarget_ = null;
@@ -259,7 +246,7 @@ module.exports.VRDevice = VRDevice;
 module.exports.HMDVRDevice = HMDVRDevice;
 module.exports.PositionSensorVRDevice = PositionSensorVRDevice;
 
-},{"./util.js":18}],2:[function(_dereq_,module,exports){
+},{"./util.js":18,"./wakelock.js":19}],2:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -310,37 +297,37 @@ function linkProgram(gl, vertexSource, fragmentSource, attribLocationMap) {
 function getProgramUniforms(gl, program) {
   var uniforms = {};
   var uniformCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-  var uniformName = "";
+  var uniformName = '';
   for (var i = 0; i < uniformCount; i++) {
     var uniformInfo = gl.getActiveUniform(program, i);
-    uniformName = uniformInfo.name.replace("[0]", "");
+    uniformName = uniformInfo.name.replace('[0]', '');
     uniforms[uniformName] = gl.getUniformLocation(program, uniformName);
   }
   return uniforms;
 }
 
 var distortionVS = [
-  "attribute vec2 position;",
-  "attribute vec2 texCoord;",
+  'attribute vec2 position;',
+  'attribute vec2 texCoord;',
 
-  "varying vec2 vTexCoord;",
+  'varying vec2 vTexCoord;',
 
-  "void main() {",
-  "  vTexCoord = texCoord;",
-  "  gl_Position = vec4( position, 1.0, 1.0 );",
-  "}",
-].join("\n");
+  'void main() {',
+  '  vTexCoord = texCoord;',
+  '  gl_Position = vec4( position, 1.0, 1.0 );',
+  '}',
+].join('\n');
 
 var distortionFS = [
-  "precision mediump float;",
-  "uniform sampler2D diffuse;",
+  'precision mediump float;',
+  'uniform sampler2D diffuse;',
 
-  "varying vec2 vTexCoord;",
+  'varying vec2 vTexCoord;',
 
-  "void main() {",
-  "  gl_FragColor = texture2D(diffuse, vTexCoord);",
-  "}",
-].join("\n");
+  'void main() {',
+  '  gl_FragColor = texture2D(diffuse, vTexCoord);',
+  '}',
+].join('\n');
 
 /**
  * A mesh-based distorter.
@@ -451,7 +438,7 @@ CardboardDistorter.prototype.onResize = function() {
     }
 
     if(!gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE) {
-      console.error("Framebuffer incomplete!");
+      console.error('Framebuffer incomplete!');
     }
   });
 };
@@ -753,7 +740,7 @@ var Eye = {
  * VRDisplay based on mobile device parameters and DeviceMotion APIs.
  */
 function CardboardVRDisplay() {
-  this.displayName = "Cardboard VRDisplay (webvr-polyfill)";
+  this.displayName = 'Cardboard VRDisplay (webvr-polyfill)';
 
   this.capabilities.hasOrientation = true;
   this.capabilities.canPresent = true;
@@ -833,11 +820,11 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
   if (this.layer_.predistorted)
     return;
 
-  var gl = this.layer_.source.getContext("webgl");
+  var gl = this.layer_.source.getContext('webgl');
   if (!gl)
-    gl = this.layer_.source.getContext("experimental-webgl");
+    gl = this.layer_.source.getContext('experimental-webgl');
   if (!gl)
-    gl = this.layer_.source.getContext("webgl2");
+    gl = this.layer_.source.getContext('webgl2');
 
   if (!gl)
     return; // Can't do distortion without a WebGL context.
@@ -1302,10 +1289,10 @@ DeviceInfo.prototype.determineDevice_ = function(deviceParams) {
   if (!deviceParams) {
     // No parameters, so use a default.
     if (Util.isIOS()) {
-      console.warn("Using fallback Android device measurements.");
+      console.warn('Using fallback Android device measurements.');
       return DEFAULT_IOS;
     } else {
-      console.warn("Using fallback iOS device measurements.");
+      console.warn('Using fallback iOS device measurements.');
       return DEFAULT_ANDROID;
     }
   }
@@ -1606,8 +1593,8 @@ function VRDisplayHMDDevice(display) {
   this.display = display;
 
   this.hardwareUnitId = display.displayId;
-  this.deviceId = "webvr-pollyfill:HMD:" + display.displayId;
-  this.deviceName = display.displayName + " (HMD)";
+  this.deviceId = 'webvr-pollyfill:HMD:' + display.displayId;
+  this.deviceName = display.displayName + ' (HMD)';
 }
 VRDisplayHMDDevice.prototype = new HMDVRDevice();
 
@@ -1646,8 +1633,8 @@ function VRDisplayPositionSensorDevice(display) {
   this.display = display;
 
   this.hardwareUnitId = display.displayId;
-  this.deviceId = "webvr-pollyfill:PositionSensor: " + display.displayId;
-  this.deviceName = display.displayName + " (PositionSensor)";
+  this.deviceId = 'webvr-pollyfill:PositionSensor: ' + display.displayId;
+  this.deviceName = display.displayName + ' (PositionSensor)';
 }
 VRDisplayPositionSensorDevice.prototype = new PositionSensorVRDevice();
 
@@ -3068,7 +3055,7 @@ var WebVRPolyfill = _dereq_('./webvr-polyfill.js');
 window.WebVRConfig = window.WebVRConfig || {};
 new WebVRPolyfill();
 
-},{"./webvr-polyfill.js":19}],13:[function(_dereq_,module,exports){
+},{"./webvr-polyfill.js":20}],13:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5766,9 +5753,121 @@ Util.getScreenHeight = function() {
       window.devicePixelRatio;
 };
 
+Util.requestFullscreen = function(element) {
+  if (element.requestFullscreen)
+    element.requestFullscreen();
+  else if (element.webkitRequestFullscreen)
+    element.webkitRequestFullscreen();
+  else if (element.mozRequestFullScreen)
+    element.mozRequestFullScreen();
+  else if (element.msRequestFullscreen)
+    element.msRequestFullscreen();
+  else
+    return false;
+
+  return true;
+};
+
+Util.exitFullscreen = function () {
+  if (document.exitFullscreen)
+    document.exitFullscreen();
+  else if (document.webkitExitFullscreen)
+    document.webkitExitFullscreen();
+  else if (document.mozCancelFullScreen)
+    document.mozCancelFullScreen();
+  else if (document.msExitFullscreen)
+    document.msExitFullscreen();
+  else
+    return false;
+
+  return true;
+};
+
+Util.getFullscreenElement = function() {
+  return document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement;
+};
+
 module.exports = Util;
 
 },{}],19:[function(_dereq_,module,exports){
+/*
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+var Util = _dereq_('./util.js');
+
+/**
+ * Android and iOS compatible wakelock implementation.
+ *
+ * Refactored thanks to dkovalev@.
+ */
+function AndroidWakeLock() {
+  var video = document.createElement('video');
+
+  video.addEventListener('ended', function() {
+    video.play();
+  });
+
+  this.request = function() {
+    if (video.paused) {
+      // Base64 version of videos_src/no-sleep-120s.mp4.
+      video.src = Util.base64('video/mp4', 'AAAAGGZ0eXBpc29tAAAAAG1wNDFhdmMxAAAIA21vb3YAAABsbXZoZAAAAADSa9v60mvb+gABX5AAlw/gAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAdkdHJhawAAAFx0a2hkAAAAAdJr2/rSa9v6AAAAAQAAAAAAlw/gAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAQAAAAHAAAAAAAJGVkdHMAAAAcZWxzdAAAAAAAAAABAJcP4AAAAAAAAQAAAAAG3G1kaWEAAAAgbWRoZAAAAADSa9v60mvb+gAPQkAGjneAFccAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAABodtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAZHc3RibAAAAJdzdHNkAAAAAAAAAAEAAACHYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAMABwASAAAAEgAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj//wAAADFhdmNDAWQAC//hABlnZAALrNlfllw4QAAAAwBAAAADAKPFCmWAAQAFaOvssiwAAAAYc3R0cwAAAAAAAAABAAAAbgAPQkAAAAAUc3RzcwAAAAAAAAABAAAAAQAAA4BjdHRzAAAAAAAAAG4AAAABAD0JAAAAAAEAehIAAAAAAQA9CQAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEATEtAAAAAAQAehIAAAAABAAAAAAAAAAEAD0JAAAAAAQBMS0AAAAABAB6EgAAAAAEAAAAAAAAAAQAPQkAAAAABAExLQAAAAAEAHoSAAAAAAQAAAAAAAAABAA9CQAAAAAEALcbAAAAAHHN0c2MAAAAAAAAAAQAAAAEAAABuAAAAAQAAAcxzdHN6AAAAAAAAAAAAAABuAAADCQAAABgAAAAOAAAADgAAAAwAAAASAAAADgAAAAwAAAAMAAAAEgAAAA4AAAAMAAAADAAAABIAAAAOAAAADAAAAAwAAAASAAAADgAAAAwAAAAMAAAAEgAAAA4AAAAMAAAADAAAABIAAAAOAAAADAAAAAwAAAASAAAADgAAAAwAAAAMAAAAEgAAAA4AAAAMAAAADAAAABIAAAAOAAAADAAAAAwAAAASAAAADgAAAAwAAAAMAAAAEgAAAA4AAAAMAAAADAAAABIAAAAOAAAADAAAAAwAAAASAAAADgAAAAwAAAAM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');
+      video.play();
+    }
+  };
+
+  this.release = function() {
+    video.pause();
+    video.src = '';
+  };
+}
+
+function iOSWakeLock() {
+  var timer = null;
+
+  this.request = function() {
+    if (!timer) {
+      timer = setInterval(function() {
+        window.location = window.location;
+        setTimeout(window.stop, 0);
+      }, 30000);
+    }
+  }
+
+  this.release = function() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+}
+
+
+function getWakeLock() {
+  var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  if (userAgent.match(/iPhone/i) || userAgent.match(/iPod/i)) {
+    return iOSWakeLock;
+  } else {
+    return AndroidWakeLock;
+  }
+}
+
+module.exports = getWakeLock();
+},{"./util.js":18}],20:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5809,7 +5908,7 @@ function WebVRPolyfill() {
 }
 
 WebVRPolyfill.prototype.isWebVRAvailable = function() {
-  var webVRAvailable = ('getVRDisplays' in navigator);
+  return ('getVRDisplays' in navigator);
 };
 
 WebVRPolyfill.prototype.isDeprecatedWebVRAvailable = function() {
@@ -5880,7 +5979,7 @@ WebVRPolyfill.prototype.getVRDisplays = function() {
 };
 
 WebVRPolyfill.prototype.getVRDevices = function() {
-  console.warn("getVRDevices is deprecated. Please update your code to use getVRDisplays instead.");
+  console.warn('getVRDevices is deprecated. Please update your code to use getVRDisplays instead.');
   var self = this;
   return new Promise(function(resolve, reject) {
     try {
