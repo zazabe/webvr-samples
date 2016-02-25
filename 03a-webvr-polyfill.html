@@ -241,6 +241,7 @@ found in the LICENSE file.
             // account.
             gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
             renderSceneView(pose, null);
+            stats.renderOrtho();
           }
         } else {
           window.requestAnimationFrame(onAnimationFrame);
