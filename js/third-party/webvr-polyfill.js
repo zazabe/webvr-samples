@@ -45,7 +45,7 @@ function VRDisplay() {
   this.fullscreenChangeHandler_ = null;
   this.fullscreenErrorHandler_ = null;
 
-  this.wakelock_ = WakeLock.getWakeLock();
+  this.wakelock_ = new WakeLock();
 }
 
 VRDisplay.prototype.requestAnimationFrame = function(callback) {
@@ -5716,6 +5716,10 @@ var Util = window.Util || {};
 
 Util.MIN_TIMESTEP = 0.001;
 Util.MAX_TIMESTEP = 1;
+
+Util.base64 = function(mimeType, base64) {
+  return 'data:' + mimeType + ';base64,' + base64;
+};
 
 Util.clamp = function(value, min, max) {
   return Math.min(Math.max(min, value), max);
