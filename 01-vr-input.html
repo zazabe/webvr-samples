@@ -44,7 +44,7 @@ found in the LICENSE file.
 
       var vrDisplay = null;
       var projectionMat = mat4.create();
-      var modelViewMat = mat4.create();
+      var viewMat = mat4.create();
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -139,19 +139,19 @@ found in the LICENSE file.
           //     var quatMat = mat4.create();
           //     quat4.toMat4(quat, quatMat);
           //     mat4.multiply(dest, quatMat);
-          mat4.fromRotationTranslation(modelViewMat, orientation, position);
+          mat4.fromRotationTranslation(viewMat, orientation, position);
 
           // Invert because we're describing the camera's position in space,
           // so the objects in the scene need to move "in reverse" to get the
           // appropriate effect.
-          mat4.invert(modelViewMat, modelViewMat);
+          mat4.invert(viewMat, viewMat);
         } else {
           // If no VRDisplay was found, create a matrix using a fallback method.
-          mat4.identity(modelViewMat);
+          mat4.identity(viewMat);
         }
 
         // Render the scene using the matrix.
-        cubeSea.render(projectionMat, modelViewMat, stats);
+        cubeSea.render(projectionMat, viewMat, stats);
 
         // Render the FPS counter.
         stats.renderOrtho();

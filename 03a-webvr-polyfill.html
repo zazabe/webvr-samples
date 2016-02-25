@@ -63,7 +63,7 @@ found in the LICENSE file.
 
       var vrDisplay = null;
       var projectionMat = mat4.create();
-      var modelViewMat = mat4.create();
+      var viewMat = mat4.create();
 
       var vrPresentButton = null;
 
@@ -198,12 +198,12 @@ found in the LICENSE file.
         else
           mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
 
-        mat4.fromRotationTranslation(modelViewMat, orientation, position);
+        mat4.fromRotationTranslation(viewMat, orientation, position);
         if (eye)
-          mat4.translate(modelViewMat, modelViewMat, eye.offset);
-        mat4.invert(modelViewMat, modelViewMat);
+          mat4.translate(viewMat, viewMat, eye.offset);
+        mat4.invert(viewMat, viewMat);
 
-        cubeSea.render(projectionMat, modelViewMat, stats);
+        cubeSea.render(projectionMat, viewMat, stats);
       }
 
       function onAnimationFrame (t) {
@@ -249,8 +249,8 @@ found in the LICENSE file.
           // No VRDisplay found.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
           mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
-          mat4.identity(modelViewMat);
-          cubeSea.render(projectionMat, modelViewMat, stats);
+          mat4.identity(viewMat);
+          cubeSea.render(projectionMat, viewMat, stats);
 
           stats.renderOrtho();
         }
