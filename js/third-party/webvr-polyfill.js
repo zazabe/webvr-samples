@@ -308,12 +308,15 @@ function getProgramUniforms(gl, program) {
 
 var distortionVS = [
   'attribute vec2 position;',
-  'attribute vec2 texCoord;',
+  'attribute vec3 texCoord;',
 
   'varying vec2 vTexCoord;',
 
+  'uniform vec4 viewportOffsetScale[2];',
+
   'void main() {',
-  '  vTexCoord = texCoord;',
+  '  vec4 viewport = viewportOffsetScale[int(texCoord.z)];',
+  '  vTexCoord = (texCoord.xy * viewport.zw) + viewport.xy;',
   '  gl_Position = vec4( position, 1.0, 1.0 );',
   '}',
 ].join('\n');
@@ -354,6 +357,9 @@ function CardboardDistorter(gl) {
   };
   this.program = linkProgram(gl, distortionVS, distortionFS, this.attribs);
   this.uniforms = getProgramUniforms(gl, this.program);
+
+  this.viewportOffsetScale = new Float32Array(8);
+  this.setViewports();
 
   this.vertexBuffer = gl.createBuffer();
   this.indexBuffer = gl.createBuffer();
@@ -513,6 +519,26 @@ CardboardDistorter.prototype.unpatch = function() {
   this.isPatched = false;
 };
 
+CardboardDistorter.prototype.setViewports = function(viewportLeft, viewportRight) {
+  if (!viewportLeft)
+    viewportLeft = [0, 0, 0.5, 1];
+
+  if (!viewportRight)
+    viewportRight = [0.5, 0, 0.5, 1];
+
+  // Left eye
+  this.viewportOffsetScale[0] = viewportLeft[0]; // X
+  this.viewportOffsetScale[1] = viewportLeft[1]; // Y
+  this.viewportOffsetScale[2] = viewportLeft[2]; // Width
+  this.viewportOffsetScale[3] = viewportLeft[3]; // Height
+
+  // Right eye
+  this.viewportOffsetScale[4] = viewportRight[0]; // X
+  this.viewportOffsetScale[5] = viewportRight[1]; // Y
+  this.viewportOffsetScale[6] = viewportRight[2]; // Width
+  this.viewportOffsetScale[7] = viewportRight[3]; // Height
+};
+
 /**
  * Performs distortion pass on the injected backbuffer, rendering it to the real
  * backbuffer.
@@ -562,12 +588,14 @@ CardboardDistorter.prototype.submitFrame = function() {
     gl.bindBuffer(gl.ARRAY_BUFFER, self.vertexBuffer);
     gl.enableVertexAttribArray(self.attribs.position);
     gl.enableVertexAttribArray(self.attribs.texCoord);
-    gl.vertexAttribPointer(self.attribs.position, 2, gl.FLOAT, false, 16, 0);
-    gl.vertexAttribPointer(self.attribs.texCoord, 2, gl.FLOAT, false, 16, 8);
+    gl.vertexAttribPointer(self.attribs.position, 2, gl.FLOAT, false, 20, 0);
+    gl.vertexAttribPointer(self.attribs.texCoord, 3, gl.FLOAT, false, 20, 8);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(self.uniforms.diffuse, 0);
     gl.bindTexture(gl.TEXTURE_2D, self.renderTarget);
+
+    gl.uniform4fv(self.uniforms.viewportOffsetScale, self.viewportOffsetScale);
 
     // Draws both eyes
     gl.drawElements(gl.TRIANGLES, self.indexCount, gl.UNSIGNED_SHORT, 0);
@@ -612,7 +640,7 @@ CardboardDistorter.prototype.updateDeviceInfo = function(deviceInfo) {
  * Based on code from the Unity cardboard plugin.
  */
 CardboardDistorter.prototype.computeMeshVertices_ = function(width, height, deviceInfo) {
-  var vertices = new Float32Array(2 * width * height * 4);
+  var vertices = new Float32Array(2 * width * height * 5);
 
   var lensFrustum = deviceInfo.getLeftEyeVisibleTanAngles();
   var noLensFrustum = deviceInfo.getLeftEyeNoLensTanAngles();
@@ -648,13 +676,12 @@ CardboardDistorter.prototype.computeMeshVertices_ = function(width, height, devi
         // explanation of what needs to happen here.
         u = (viewport.x + u * viewport.width - 0.5) * 2.0; //* aspect;
         v = (viewport.y + v * viewport.height - 0.5) * 2.0;
-        // Adjust s to account for left/right split in StereoScreen.
-        s = (s + e) / 2;
 
-        vertices[(vidx * 4) + 0] = u; // position.x
-        vertices[(vidx * 4) + 1] = v; // position.y
-        vertices[(vidx * 4) + 2] = s; // texCoord.x
-        vertices[(vidx * 4) + 3] = t; // texCoord.y
+        vertices[(vidx * 5) + 0] = u; // position.x
+        vertices[(vidx * 5) + 1] = v; // position.y
+        vertices[(vidx * 5) + 2] = s; // texCoord.x
+        vertices[(vidx * 5) + 3] = t; // texCoord.y
+        vertices[(vidx * 5) + 4] = e; // texCoord.z (viewport index)
       }
     }
     var w = lensFrustum[2] - lensFrustum[0];
@@ -832,6 +859,9 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
   // Create a new distorter for the target context
   this.distorter_ = new CardboardDistorter(gl);
   this.distorter_.updateDeviceInfo(this.deviceInfo_);
+
+  if (this.layer_.leftViewport || this.layer_.rightViewport)
+    this.distorter_.setViewports(this.layer_.leftViewport, this.layer_.rightViewport);
 };
 
 CardboardVRDisplay.prototype.endPresent_ = function() {

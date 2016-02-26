@@ -165,7 +165,6 @@ var WGLUDebugGeometry = (function() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
 
     gl.enableVertexAttribArray(program.attrib.position);
-    gl.enableVertexAttribArray(program.attrib.texCoord);
 
     gl.vertexAttribPointer(program.attrib.position, 3, gl.FLOAT, false, 12, 0);
   };
