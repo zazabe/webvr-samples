@@ -47,12 +47,81 @@ found in the LICENSE file.
       (function () {
       "use strict";
 
+
+      var ac = new AudioContext();
+
+      var osc = ac.createOscillator();
+      var mod = ac.createOscillator();
+      
+      var gain = ac.createGain();
+      var modGain = ac.createGain();
+
+      osc.type = 'sawtooth';
+      gain.gain.value = 0.025;
+
+      mod.type = 'square';
+      mod.frequency.value = 8;
+      modGain.gain.value = 0.025;
+
+      var panner = ac.createPanner();
+      panner.panningModel = 'HRTF';
+      panner.distanceModel = 'inverse';
+
+      
+      osc.connect(gain);
+      mod.connect(modGain).connect(gain.gain);
+
+      gain.connect(panner).connect(ac.destination);
+
+      osc.start();
+      mod.start();
+
+
+      var soundPosition = [2, 1.6, 0];
+
+      panner.setPosition.apply(panner, soundPosition);
+
+      var listener = ac.listener;
+
+
+
       var vrDisplay = null;
       var projectionMat = mat4.create();
       var modelViewMat = mat4.create();
       var standingMat = mat4.create();
       var standingPosition = vec3.create();
       var vrPresentButton = null;
+
+      var getListenerPositionDirection = (function() {
+        var tmpMat = mat4.create();
+        var tmpPosition = vec3.create();
+        var tmpDirection = vec3.create();
+        var tmpOrientation = quat.create();
+        return function (pose) {
+          var orientation = pose.orientation;
+          var position = pose.position;
+          if (!orientation) { orientation = [0, 0, 0, 1]; }
+          if (!position) { position = [0, 0, 0]; }
+
+          if (vrDisplay.stageParameters) { 
+            mat4.fromRotationTranslation(tmpMat, orientation, position);
+            mat4.multiply(tmpMat, vrDisplay.stageParameters.sittingToStandingTransform, modelViewMat);
+          } else {
+            vec3.add(standingPosition, position, [0, 1.65, 0]);
+            mat4.fromRotationTranslation(tmpMat, orientation, standingPosition);
+          }
+
+          mat4.getTranslation(tmpPosition, tmpMat);
+          mat4.getRotation(tmpOrientation, tmpMat);
+          vec3.transformQuat(tmpDirection, [0, 0, -1], tmpOrientation);
+          vec3.normalize(tmpDirection, tmpDirection);
+          
+          return {
+            position: tmpPosition,
+            direction: tmpDirection
+          };
+        }
+      })();
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -207,6 +276,17 @@ found in the LICENSE file.
 
         debugGeom.bind(projectionMat, modelViewMat);
         debugGeom.drawCube(orientation, position, 0.2, [0, 0, 1, 1]);
+
+        // Draw sound cube.
+        var vrListener = getListenerPositionDirection(pose);
+        
+
+        // vec3.add(vrListener.direction)
+
+        debugGeom.drawCube(null, soundPosition, 0.4, [1, 0, 0, 1]);
+
+        var _orientation = vrListener.direction;
+        listener.setOrientation(_orientation[0], _orientation[1], _orientation[2], 0, 1, 0);
       }
 
       function onAnimationFrame (t) {
