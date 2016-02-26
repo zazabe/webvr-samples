@@ -58,56 +58,10 @@ found in the LICENSE file.
       var standingPosition = vec3.create();
       var vrPresentButton = null;
 
-      // For VRAudioPanner.
-      var isAudioPannerReady = false;
-      var testSource1, testSource2, testSource3;
 
-      var soundFileData = [{
-          name: 'drums',
-          url: 'media/sound/drums.wav'
-        }, {
-          name: 'guitar',
-          url: 'media/sound/guitar.wav'
-        }, {
-          name: 'perc',
-          url: 'media/sound/perc.wav'
-        }];
-
-
-      // ======================================================
-      // WebAudio scene setup. This code is not WebVR specific.
-      // ======================================================
-
-      function initAudio(buffers) {
-        testSource1 = VRAudioPanner.createTestSource({
-          buffer: buffers.get('drums'),
-          gain: 0.5,
-          position: [0, PLAYER_HEIGHT, -1]
-        });
-
-        testSource2 = VRAudioPanner.createTestSource({
-          buffer: buffers.get('guitar'),
-          gain: 0.5,
-          position: [-1, PLAYER_HEIGHT, 0]
-        });
-
-        testSource3 = VRAudioPanner.createTestSource({
-          buffer: buffers.get('perc'),
-          gain: 0.5,
-          position: [1, PLAYER_HEIGHT, 0]
-        });
-
-        testSource1.start();
-        testSource2.start();
-        testSource3.start();
-
-        isAudioPannerReady = true;
-      }
-
-
-      // ===================================================
-      // WebGL scene setup. This code is not WebVR specific.
-      // ===================================================
+      // ================================================================
+      // WebGL and WebAudio scene setup. This code is not WebVR specific.
+      // ================================================================
 
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
@@ -138,9 +92,60 @@ found in the LICENSE file.
         window.addEventListener("resize", onResize, false);
         onResize();
         window.requestAnimationFrame(onAnimationFrame);
+      }
 
-        // Boot up the audio object.
-        VRAudioPanner.loadAudioFiles(soundFileData, null).then(initAudio);
+      // WebAudio setup.
+      var isAudioPannerReady = false;
+      var drumSource, guitarSource, percSource;
+      var soundFileData = [{
+          name: 'drums',
+          url: 'media/sound/drums.ogg'
+        }, {
+          name: 'guitar',
+          url: 'media/sound/guitar.ogg'
+        }, {
+          name: 'perc',
+          url: 'media/sound/perc.ogg'
+        }];
+
+      function initAudio(buffers) {
+        drumSource = VRAudioPanner.createTestSource({
+          buffer: buffers.get('drums'),
+          gain: 0.75,
+          position: [0, PLAYER_HEIGHT, 1],
+          orientation: [0, 0, 0]
+        });
+
+        guitarSource = VRAudioPanner.createTestSource({
+          buffer: buffers.get('guitar'),
+          gain: 0.75,
+          position: [-1, PLAYER_HEIGHT, 0],
+          orientation: [0, 0, 0]
+        });
+
+        percSource = VRAudioPanner.createTestSource({
+          buffer: buffers.get('perc'),
+          gain: 0.75,
+          position: [1, PLAYER_HEIGHT, 0],
+          orientation: [0, 0, 0]
+        });
+
+        drumSource.start();
+        guitarSource.start();
+        percSource.start();
+
+        isAudioPannerReady = true;
+      }
+
+      // Initiate Audio and then WebGL.
+      function init(preserveDrawingBuffer) {
+        // Load sound files and then initiate WebAudio/WebGL.
+        VRAudioPanner
+          .loadAudioFiles(soundFileData, null)
+          .then(initAudio)
+          .then(function () {
+            initWebGL(preserveDrawingBuffer);
+          });
       }
 
 
@@ -183,7 +188,7 @@ found in the LICENSE file.
           if (displays.length > 0) {
             vrDisplay = displays[0];
 
-            initWebGL(true);
+            init(true);
 
             if (vrDisplay.stageParameters) {
               cubeIsland.resize(vrDisplay.stageParameters.sizeX, vrDisplay.stageParameters.sizeZ);
@@ -196,12 +201,12 @@ found in the LICENSE file.
 
             window.addEventListener('vrdisplaypresentchange', onVRPresentChange, false);
           } else {
-            initWebGL(false);
+            init(false);
             VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
           }
         });
       } else {
-        initWebGL(false);
+        init(false);
         VRSamplesUtil.addError("Your browser does not support WebVR. See <a href='http://webvr.info'>webvr.info</a> for assistance.");
       }
 
@@ -245,15 +250,13 @@ found in the LICENSE file.
 
         cubeIsland.render(projectionMat, viewMat, stats);
 
-        // Draw cubes at the position of each audio source
-        debugGeom.bind(projectionMat, viewMat);
-
-        // TODO(hoch): Change the size based on the gain (low-passed filtered)
-        // of web audio sources.
+        // Draw cubes at the position of each audio source.
+        // (Red: Drum, Green: Guitar, Blue: Percussion)
         if (isAudioPannerReady) {
-          debugGeom.drawCube(null, testSource1.getPosition(), 0.2, [1, 0, 0, 1]);
-          debugGeom.drawCube(null, testSource2.getPosition(), 0.2, [0, 1, 0, 1]);
-          debugGeom.drawCube(null, testSource3.getPosition(), 0.2, [0, 0, 1, 1]);
+          debugGeom.bind(projectionMat, viewMat);
+          debugGeom.drawCube(null, drumSource.getPosition(), 0.2, [1, 0, 0, 1]);
+          debugGeom.drawCube(null, guitarSource.getPosition(), 0.2, [0, 1, 0, 1]);
+          debugGeom.drawCube(null, percSource.getPosition(), 0.2, [0, 0, 1, 1]);
         }
       }
 
@@ -266,18 +269,21 @@ found in the LICENSE file.
       var getListenerPositionDirection = (function() {
         var tmpPosition = vec3.create();
         var tmpDirection = vec3.create();
+        var tmpUp = vec3.create();
         var tmpOrientation = quat.create();
         return function (poseMat) {
-          mat4.getTranslation(tmpPosition, poseMat);
-          mat4.getRotation(tmpOrientation, poseMat);
-          vec3.transformQuat(tmpDirection, [0, 0, -1], tmpOrientation);
-          vec3.normalize(tmpDirection, tmpDirection);
-          return {
-            position: tmpPosition,
-            direction: tmpDirection
-          };
-        }
-      })();
+            mat4.getTranslation(tmpPosition, poseMat);
+            mat4.getRotation(tmpOrientation, poseMat);
+            vec3.transformQuat(tmpDirection, [0, 0, -1], tmpOrientation);
+            vec3.transformQuat(tmpUp, [0, 1, 0], tmpOrientation);
+            vec3.normalize(tmpDirection, tmpDirection);
+            return {
+              position: tmpPosition,
+              direction: tmpDirection,
+              up: tmpUp
+            };
+          }
+        })();
 
       function onAnimationFrame (t) {
         stats.begin();
@@ -289,11 +295,6 @@ found in the LICENSE file.
 
           var pose = vrDisplay.getPose();
           getPoseMatrix(poseMat, pose);
-
-          // TODO: Move sound sources.
-          // testSource1.setPosition(newPosition1);
-          // testSource2.setPosition(newPosition2);
-          // testSource3.setPosition(newPosition3);
 
           if(vrDisplay.isPresenting) {
             gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
@@ -309,12 +310,12 @@ found in the LICENSE file.
             stats.renderOrtho();
           }
 
-          // Compute the listener position/direction
+          // Compute the listener position/direction.
           var listener = getListenerPositionDirection(poseMat);
 
-          // Set the listener position with web audio panner.
+          // Set the listener position with WebAudio panner.
           VRAudioPanner.setListenerPosition(listener.position);
-          VRAudioPanner.setListenerOrientation(listener.direction);
+          VRAudioPanner.setListenerOrientation(listener.direction, listener.up);
         } else {
           window.requestAnimationFrame(onAnimationFrame);
 
