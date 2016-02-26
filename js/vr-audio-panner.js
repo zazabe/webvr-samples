@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 (function (VRAudioPanner) {
-  
+
   'use strict';
 
   // Master audio context.
@@ -14,6 +14,9 @@
   // Default settings for panning.
   var _PANNING_MODEL = 'HRTF';
   var _DISTANCE_MODEL = 'inverse';
+  var _CONE_INNER_ANGLE = 60;
+  var _CONE_OUTER_ANGLE = 120;
+  var _CONE_OUTER_GAIN = 0.25;
 
   // Global up vector.
   var _UP_VECTOR = [0, 1, 0];
@@ -25,7 +28,7 @@
    * @param {Number} options.gain Sound object gain. (0.0~1.0)
    * @param {Number} options.frequency Sound object frequency. (Hz)
    * @param {Number} options.modSpeed Amp modulation speed. (Hz)
-   * @param {Array} options.position x, y, z position in a array.
+   * @param {Array} options.position x, y, z position in an array.
    */
   function TestPulsor (options) {
     // A simple amplitude-modulation pulse graph.
@@ -47,7 +50,7 @@
 
     this._panner.panningModel = _PANNING_MODEL;
     this._panner.distanceModel = _DISTANCE_MODEL;
-    
+
     this._position = [0, 0, 0];
     this._orientation = [1, 0, 0];
 
@@ -55,41 +58,59 @@
     this.setOrientation(options.orientation);
   };
 
+  /**
+   * Start sound generation.
+   */
   TestPulsor.prototype.start = function () {
     this._osc.start();
     this._mod.start();
   };
 
+  /**
+   * Stop sound generation. Once the source is stopped, it will be unusable.
+   */
   TestPulsor.prototype.stop = function () {
     this._osc.stop();
     this._mod.stop();
   };
 
+  /**
+   * Get the current position in 3D vector.
+   * @return {Array} x, y, z position in an array.
+   */
   TestPulsor.prototype.getPosition = function () {
     return this._position;
   };
 
+  /**
+   * Set the object position with 3D vector.
+   * @param {Array} position x, y, z position in an array.
+   */
   TestPulsor.prototype.setPosition = function (position) {
     if (position) {
       this._position[0] = position[0];
       this._position[1] = position[1];
-      this._position[2] = position[2];  
+      this._position[2] = position[2];
     }
-    
+
     this._panner.setPosition.apply(this._panner, this._position);
   };
 
+  /**
+   * Get the object orientation with 3D vector.
+   * @param {Array} position x, y, z position in an array.
+   */
   TestPulsor.prototype.getOrientation = function () {
     return this._orientation;
-  };  
+  };
 
   TestPulsor.prototype.setOrientation = function (orientation) {
     if (orientation) {
       this._orientation[0] = orientation[0];
       this._orientation[1] = orientation[1];
-      this._orientation[2] = orientation[2];  
+      this._orientation[2] = orientation[2];
     }
-    
+
     this._panner.setOrientation.apply(this._panner, this._orientation);
   };
 
@@ -116,7 +137,10 @@
 
     this._panner.panningModel = _PANNING_MODEL;
     this._panner.distanceModel = _DISTANCE_MODEL;
-    
+    this._panner.coneInnerAngle = _CONE_INNER_ANGLE;
+    this._panner.coneOuterAngle = _CONE_OUTER_ANGLE;
+    this._panner.coneOuterGain = _CONE_OUTER_GAIN;
+
     this._position = [0, 0, 0];
     this._orientation = [1, 0, 0];
 
@@ -140,23 +164,23 @@
     if (position) {
       this._position[0] = position[0];
       this._position[1] = position[1];
-      this._position[2] = position[2];  
+      this._position[2] = position[2];
     }
-    
+
     this._panner.setPosition.apply(this._panner, this._position);
   };
 
   TestSource.prototype.getOrientation = function () {
     return this._orientation;
-  };  
+  };
 
   TestSource.prototype.setOrientation = function (orientation) {
     if (orientation) {
       this._orientation[0] = orientation[0];
       this._orientation[1] = orientation[1];
-      this._orientation[2] = orientation[2];  
+      this._orientation[2] = orientation[2];
     }
-    
+
     this._panner.setOrientation.apply(this._panner, this._orientation);
   };
 
@@ -171,7 +195,7 @@
       if (xhr.status === 200) {
         context.decodeAudioData(xhr.response,
           function (buffer) {
-            console.log('Loading completed: ' + fileInfo.url);
+            console.log('[VRAudioPanner] File loaded: ' + fileInfo.url);
             done(fileInfo.name, buffer);
           },
           function (message) {
@@ -199,7 +223,7 @@
    * @param {Object} audioFileData Audio file info in the format of {name, url}
    * @param {Function} resolve       Resolution handler for promise.
    * @param {Function} reject        Rejection handler for promise.
-   * @param {Function} progress      Progress event handler for promise.
+   * @param {Function} progress      Progress event handler.
    */
   function AudioBufferManager(context, audioFileData, resolve, reject, progress) {
     this._context = context;
@@ -229,10 +253,10 @@
   AudioBufferManager.prototype._done = function (filename, buffer) {
     // Label the loading task.
     this._loadingTasks[filename] = buffer !== null ? 'loaded' : 'failed';
-    
+
     // A failed task will be a null buffer.
     this._buffers.set(filename, buffer);
-    
+
     this._updateProgress(filename);
   };
 
@@ -270,13 +294,15 @@
   /**
    * Static method for updating listener's orientation.
    * @param {Array} orientation Listener orientation in x, y, z.
+   * @param {Array} orientation Listener's up vector in x, y, z.
    */
-  VRAudioPanner.setListenerOrientation = function (orientation) {
-    _context.listener.setOrientation(orientation[0], orientation[1], orientation[2], 0, 1, 0);
+  VRAudioPanner.setListenerOrientation = function (orientation, upvector) {
+    _context.listener.setOrientation(orientation[0], orientation[1], orientation[2],
+      upvector[0], upvector[1], upvector[2]);
   };
 
   /**
-   *  Load an audio file asynchronously.
+   * Load an audio file asynchronously.
    * @param {Array} dataModel Audio file info in the format of {name, url}
    * @param {Function} onprogress Callback function for reporting the progress.
    * @return {Promise} Promise.
