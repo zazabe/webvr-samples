@@ -39,6 +39,7 @@ found in the LICENSE file.
 
     <script src="js/vr-cube-island.js"></script>
     <script src="js/vr-samples-util.js"></script>
+    <script src="js/vr-audio-panner.js"></script>
   </head>
   <body>
     <canvas id="webgl-canvas"></canvas>
@@ -56,6 +57,53 @@ found in the LICENSE file.
       var standingMat = mat4.create();
       var standingPosition = vec3.create();
       var vrPresentButton = null;
+
+      // For VRAudioPanner.
+      var isAudioPannerReady = false;
+      var testSource1, testSource2, testSource3;
+
+      var soundFileData = [{
+          name: 'drums',
+          url: 'media/sound/drums.mp3'
+        }, {
+          name: 'guitar',
+          url: 'media/sound/guitar.mp3'
+        }, {
+          name: 'perc',
+          url: 'media/sound/perc.mp3'
+        }];     
+
+
+      // ======================================================
+      // WebAudio scene setup. This code is not WebVR specific.
+      // ======================================================
+
+      function initAudio(buffers) {
+        testSource1 = VRAudioPanner.createTestSource({
+          buffer: buffers.get('drums'),
+          gain: 0.5,
+          position: [0, PLAYER_HEIGHT, -1]
+        });
+
+        testSource2 = VRAudioPanner.createTestSource({
+          buffer: buffers.get('guitar'),
+          gain: 0.5,
+          position: [-1, PLAYER_HEIGHT, 0]
+        });
+
+        testSource3 = VRAudioPanner.createTestSource({
+          buffer: buffers.get('perc'),
+          gain: 0.5,
+          position: [1, PLAYER_HEIGHT, 0]
+        });
+
+        testSource1.start();
+        testSource2.start();
+        testSource3.start();
+
+        isAudioPannerReady = true;
+      }
+
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -90,7 +138,11 @@ found in the LICENSE file.
         window.addEventListener("resize", onResize, false);
         onResize();
         window.requestAnimationFrame(onAnimationFrame);
+
+        // Boot up the audio object.
+        VRAudioPanner.loadAudioFiles(soundFileData, null).then(initAudio);
       }
+
 
       // ================================
       // WebVR specific code begins here.
@@ -195,9 +247,14 @@ found in the LICENSE file.
 
         // Draw cubes at the position of each audio source
         debugGeom.bind(projectionMat, viewMat);
-        debugGeom.drawCube(null, [0, PLAYER_HEIGHT, -1], 0.2, [1, 0, 0, 1]);
-        debugGeom.drawCube(null, [-1, PLAYER_HEIGHT, 0], 0.2, [, 1, 0, 1]);
-        debugGeom.drawCube(null, [1, PLAYER_HEIGHT, 0], 0.2, [0, 0, 1, 1]);
+
+        // TODO(hoch): Change the size based on the gain (low-passed filtered)
+        // of web audio sources.
+        if (isAudioPannerReady) {
+          debugGeom.drawCube(null, testSource1.getPosition(), 0.2, [1, 0, 0, 1]);
+          debugGeom.drawCube(null, testSource2.getPosition(), 0.2, [0, 1, 0, 1]);
+          debugGeom.drawCube(null, testSource3.getPosition(), 0.2, [0, 0, 1, 1]);  
+        }
       }
 
       // For WebAudio we want to get the position of the listener and a vector
@@ -233,6 +290,11 @@ found in the LICENSE file.
           var pose = vrDisplay.getPose();
           getPoseMatrix(poseMat, pose);
 
+          // TODO: Move sound sources.
+          // testSource1.setPosition(newPosition1);
+          // testSource2.setPosition(newPosition2);
+          // testSource3.setPosition(newPosition3);
+
           if(vrDisplay.isPresenting) {
             gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
             renderSceneView(poseMat, vrDisplay.getEyeParameters("left"));
@@ -250,8 +312,9 @@ found in the LICENSE file.
           // Compute the listener position/direction
           var listener = getListenerPositionDirection(poseMat);
 
-          // TODO: WebAudio stuff
-
+          // Set the listener position with web audio panner.
+          VRAudioPanner.setListenerPosition(listener.position);
+          VRAudioPanner.setListenerOrientation(listener.direction);
         } else {
           window.requestAnimationFrame(onAnimationFrame);
 
