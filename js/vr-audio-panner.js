@@ -127,8 +127,9 @@
     this._src = _context.createBufferSource();
     this._out = _context.createGain();
     this._panner = _context.createPanner();
+    this._analyser = _context.createAnalyser();
 
-    this._src.connect(this._out).connect(this._panner).connect(_context.destination);
+    this._src.connect(this._out).connect(this._analyser).connect(this._panner).connect(_context.destination);
 
     this._src.buffer = options.buffer;
     this._src.detune.value = (options.detune || 0);
@@ -143,6 +144,8 @@
 
     this._position = [0, 0, 0];
     this._orientation = [1, 0, 0];
+
+    this._analyserBuffer = new Uint8Array(this._analyser.frequencyBinCount);
 
     this.setPosition(options.position);
     this.setOrientation(options.orientation);
@@ -182,6 +185,16 @@
     }
 
     this._panner.setOrientation.apply(this._panner, this._orientation);
+  };
+
+  TestSource.prototype.getVisualizerScale = function () {
+    this._analyser.getByteFrequencyData(this._analyserBuffer);
+    var total = 0;
+    for (var i = 0; i < this._analyserBuffer.length; ++i) {
+      total += this._analyserBuffer[i];
+    }
+    total /= this._analyserBuffer.length;
+    return (total / 256.0);
   };
 
 
