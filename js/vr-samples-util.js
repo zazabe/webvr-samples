@@ -102,7 +102,7 @@ var VRSamplesUtil = (function() {
     return buttonContainer;
   }
 
-  function addButtonElement(message, icon) {
+  function addButtonElement(message, key, icon) {
     var buttonElement = document.createElement("div");
     buttonElement.classList.add = "vr-sample-button";
     buttonElement.style.color = "#FFF";
@@ -123,20 +123,48 @@ var VRSamplesUtil = (function() {
       buttonElement.innerHTML = message;
     }
 
+    if (key) {
+      var keyElement = document.createElement("span");
+      keyElement.classList.add = "vr-sample-button-accelerator";
+      keyElement.style.fontSize = "0.75em";
+      keyElement.style.fontStyle = "italic";
+      keyElement.innerHTML = " (" + key + ")";
+
+      buttonElement.appendChild(keyElement);
+    }
+
     getButtonContainer().appendChild(buttonElement);
 
     return buttonElement;
   }
 
-  function addButton(message, icon, callback) {
-    var element = addButtonElement(message, icon);
+  function addButton(message, key, icon, callback) {
+    var keyListener = null;
+    if (key) {
+      var keyCode = key.charCodeAt(0);
+      keyListener = function (event) {
+        if (event.keyCode == keyCode) {
+          callback(event);
+        }
+      };
+      document.addEventListener("keydown", keyListener, false);
+    }
+    var element = addButtonElement(message, key, icon);
     element.addEventListener("click", callback, false);
-    return element;
+    
+    return { 
+      element: element,
+      keyListener: keyListener
+    };
   }
 
   function removeButton(button) {
-    if (button && button.parentElement)
-      button.parentElement.removeChild(button);
+    if (!button)
+      return;
+    if (button.element.parentElement)
+      button.element.parentElement.removeChild(button.element);
+    if (button.keyListener)
+      document.removeEventListener("keydown", button.keyListener, false);
   }
 
   return {

@@ -125,7 +125,7 @@ found in the LICENSE file.
             // On devices with an external display the UA may not provide a way
             // to exit VR presentation mode, so we should provide one ourselves.
             removeButton(vrPresentButton);
-            vrPresentButton = VRSamplesUtil.addButton("Exit VR", "media/icons/cardboard64.png", onVRExitPresent);
+            vrPresentButton = VRSamplesUtil.addButton("Exit VR", "E", "media/icons/cardboard64.png", onVRExitPresent);
           }
         } else {
           // If we have an external display take down the presenting message and
@@ -134,7 +134,7 @@ found in the LICENSE file.
             presentingMessage.style.display = "";
 
             removeButton(vrPresentButton);
-            vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+            vrPresentButton = VRSamplesUtil.addButton("Enter VR", "E", "media/icons/cardboard64.png", onVRRequestPresent);
           }
         }
       }
@@ -143,13 +143,13 @@ found in the LICENSE file.
         navigator.getVRDisplays().then(function (displays) {
           if (displays.length > 0) {
             vrDisplay = displays[0];
-            VRSamplesUtil.addButton("Reset Pose", null, function() { vrDisplay.resetPose(); });
+            VRSamplesUtil.addButton("Reset Pose", "R", null, function() { vrDisplay.resetPose(); });
 
             // Generally, you want to wait until VR support is confirmed and
             // you know the user has a VRDisplay capable of presenting connected
             // before adding UI that advertises VR features.
             if (vrDisplay.capabilities.canPresent)
-              vrPresentButton = VRSamplesUtil.addButton("Enter VR", "media/icons/cardboard64.png", onVRRequestPresent);
+              vrPresentButton = VRSamplesUtil.addButton("Enter VR", "E", "media/icons/cardboard64.png", onVRRequestPresent);
 
             // The UA may kick us out of VR present mode for any reason, so to
             // ensure we always know when we begin/end presenting we need to
