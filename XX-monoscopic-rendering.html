@@ -143,8 +143,8 @@ found in the LICENSE file.
         var layer = {
           source: webglCanvas,
           // To indicate a monoscopic rendering we set both viewports to overlap.
-          leftViewport: monoView.leftUVBounds,
-          rightViewport: monoView.rightUVBounds,
+          leftBounds: monoView.leftUVBounds,
+          rightBounds: monoView.rightUVBounds,
         };
         vrDisplay.requestPresent(layer).then(function () {
         }, function () {

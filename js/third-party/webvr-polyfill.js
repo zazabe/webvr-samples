@@ -519,24 +519,24 @@ CardboardDistorter.prototype.unpatch = function() {
   this.isPatched = false;
 };
 
-CardboardDistorter.prototype.setViewports = function(viewportLeft, viewportRight) {
-  if (!viewportLeft)
-    viewportLeft = [0, 0, 0.5, 1];
+CardboardDistorter.prototype.setTextureBounds = function(leftBounds, rightBounds) {
+  if (!leftBounds)
+    leftBounds = [0, 0, 0.5, 1];
 
-  if (!viewportRight)
-    viewportRight = [0.5, 0, 0.5, 1];
+  if (!rightBounds)
+    rightBounds = [0.5, 0, 0.5, 1];
 
   // Left eye
-  this.viewportOffsetScale[0] = viewportLeft[0]; // X
-  this.viewportOffsetScale[1] = viewportLeft[1]; // Y
-  this.viewportOffsetScale[2] = viewportLeft[2]; // Width
-  this.viewportOffsetScale[3] = viewportLeft[3]; // Height
+  this.viewportOffsetScale[0] = leftBounds[0]; // X
+  this.viewportOffsetScale[1] = leftBounds[1]; // Y
+  this.viewportOffsetScale[2] = leftBounds[2]; // Width
+  this.viewportOffsetScale[3] = leftBounds[3]; // Height
 
   // Right eye
-  this.viewportOffsetScale[4] = viewportRight[0]; // X
-  this.viewportOffsetScale[5] = viewportRight[1]; // Y
-  this.viewportOffsetScale[6] = viewportRight[2]; // Width
-  this.viewportOffsetScale[7] = viewportRight[3]; // Height
+  this.viewportOffsetScale[4] = rightBounds[0]; // X
+  this.viewportOffsetScale[5] = rightBounds[1]; // Y
+  this.viewportOffsetScale[6] = rightBounds[2]; // Width
+  this.viewportOffsetScale[7] = rightBounds[3]; // Height
 };
 
 /**
@@ -860,8 +860,8 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
   this.distorter_ = new CardboardDistorter(gl);
   this.distorter_.updateDeviceInfo(this.deviceInfo_);
 
-  if (this.layer_.leftViewport || this.layer_.rightViewport)
-    this.distorter_.setViewports(this.layer_.leftViewport, this.layer_.rightViewport);
+  if (this.layer_.leftBounds || this.layer_.rightBounds)
+    this.distorter_.setTextureBounds(this.layer_.leftBounds, this.layer_.rightBounds);
 };
 
 CardboardVRDisplay.prototype.endPresent_ = function() {
