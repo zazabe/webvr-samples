@@ -124,7 +124,7 @@ found in the LICENSE file.
 
             // On devices with an external display the UA may not provide a way
             // to exit VR presentation mode, so we should provide one ourselves.
-            removeButton(vrPresentButton);
+            VRSamplesUtil.removeButton(vrPresentButton);
             vrPresentButton = VRSamplesUtil.addButton("Exit VR", "E", "media/icons/cardboard64.png", onVRExitPresent);
           }
         } else {
@@ -133,7 +133,7 @@ found in the LICENSE file.
           if (vrDisplay.capabilities.hasExternalDisplay) {
             presentingMessage.style.display = "";
 
-            removeButton(vrPresentButton);
+            VRSamplesUtil.removeButton(vrPresentButton);
             vrPresentButton = VRSamplesUtil.addButton("Enter VR", "E", "media/icons/cardboard64.png", onVRRequestPresent);
           }
         }
