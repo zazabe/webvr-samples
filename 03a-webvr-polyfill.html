@@ -57,7 +57,7 @@ found in the LICENSE file.
     <canvas id="webgl-canvas"></canvas>
     <div id="presenting-message">Put on your headset now</canvas>
     <script>
-      /* global mat4, WGLUCubeSea, WGLUTextureLoader, VRSamplesUtil */
+      /* global mat4, VRCubeSea, WGLUStats, WGLUTextureLoader, VRSamplesUtil */
       (function () {
       "use strict";
 
@@ -143,7 +143,7 @@ found in the LICENSE file.
         navigator.getVRDisplays().then(function (displays) {
           if (displays.length > 0) {
             vrDisplay = displays[0];
-            VRSamplesUtil.addButton("Reset Pose", "R", null, function() { vrDisplay.resetPose(); });
+            VRSamplesUtil.addButton("Reset Pose", "R", null, function () { vrDisplay.resetPose(); });
 
             // Generally, you want to wait until VR support is confirmed and
             // you know the user has a VRDisplay capable of presenting connected

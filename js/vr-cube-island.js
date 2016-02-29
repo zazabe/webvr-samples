@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/* global mat4, WGLUProgram */
+
 /*
 Like CubeSea, but designed around a users physical space. One central platform
 that maps to the users play area and several floating cubes that sit just
 those boundries (just to add visual interest)
 */
-var VRCubeIsland = (function() {
-
+window.VRCubeIsland = (function () {
   "use strict";
 
   var cubeIslandVS = [
@@ -34,7 +35,7 @@ var VRCubeIsland = (function() {
     "}",
   ].join("\n");
 
-  var CubeIsland = function(gl, texture, width, depth) {
+  var CubeIsland = function (gl, texture, width, depth) {
     this.gl = gl;
 
     this.statsMat = mat4.create();
@@ -54,10 +55,9 @@ var VRCubeIsland = (function() {
     this.indexBuffer = gl.createBuffer();
 
     this.resize(width, depth);
-  }
+  };
 
-
-  CubeIsland.prototype.resize = function(width, depth) {
+  CubeIsland.prototype.resize = function (width, depth) {
     var gl = this.gl;
 
     this.width = width;
@@ -66,12 +66,12 @@ var VRCubeIsland = (function() {
     var cubeVerts = [];
     var cubeIndices = [];
 
-    // Build a single box
-    function appendBox(left, bottom, back, right, top, front) {
+    // Build a single box.
+    function appendBox (left, bottom, back, right, top, front) {
       // Bottom
       var idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+1, idx+2);
-      cubeIndices.push(idx, idx+2, idx+3);
+      cubeIndices.push(idx, idx + 1, idx + 2);
+      cubeIndices.push(idx, idx + 2, idx + 3);
 
       cubeVerts.push(left, bottom, back, 0.0, 1.0);
       cubeVerts.push(right, bottom, back, 1.0, 1.0);
@@ -80,8 +80,8 @@ var VRCubeIsland = (function() {
 
       // Top
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+2, idx+1);
-      cubeIndices.push(idx, idx+3, idx+2);
+      cubeIndices.push(idx, idx + 2, idx + 1);
+      cubeIndices.push(idx, idx + 3, idx + 2);
 
       cubeVerts.push(left, top, back, 0.0, 0.0);
       cubeVerts.push(right, top, back, 1.0, 0.0);
@@ -90,8 +90,8 @@ var VRCubeIsland = (function() {
 
       // Left
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+2, idx+1);
-      cubeIndices.push(idx, idx+3, idx+2);
+      cubeIndices.push(idx, idx + 2, idx + 1);
+      cubeIndices.push(idx, idx + 3, idx + 2);
 
       cubeVerts.push(left, bottom, back, 0.0, 1.0);
       cubeVerts.push(left, top, back, 0.0, 0.0);
@@ -100,8 +100,8 @@ var VRCubeIsland = (function() {
 
       // Right
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+1, idx+2);
-      cubeIndices.push(idx, idx+2, idx+3);
+      cubeIndices.push(idx, idx + 1, idx + 2);
+      cubeIndices.push(idx, idx + 2, idx + 3);
 
       cubeVerts.push(right, bottom, back, 1.0, 1.0);
       cubeVerts.push(right, top, back, 1.0, 0.0);
@@ -110,8 +110,8 @@ var VRCubeIsland = (function() {
 
       // Back
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+2, idx+1);
-      cubeIndices.push(idx, idx+3, idx+2);
+      cubeIndices.push(idx, idx + 2, idx + 1);
+      cubeIndices.push(idx, idx + 3, idx + 2);
 
       cubeVerts.push(left, bottom, back, 1.0, 1.0);
       cubeVerts.push(right, bottom, back, 0.0, 1.0);
@@ -120,8 +120,8 @@ var VRCubeIsland = (function() {
 
       // Front
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+1, idx+2);
-      cubeIndices.push(idx, idx+2, idx+3);
+      cubeIndices.push(idx, idx + 1, idx + 2);
+      cubeIndices.push(idx, idx + 2, idx + 3);
 
       cubeVerts.push(left, bottom, front, 0.0, 1.0);
       cubeVerts.push(right, bottom, front, 1.0, 1.0);
@@ -129,17 +129,17 @@ var VRCubeIsland = (function() {
       cubeVerts.push(left, top, front, 0.0, 0.0);
     }
 
-    // Appends a cube with the given centerpoint and size
-    function appendCube(x, y, z, size) {
+    // Appends a cube with the given centerpoint and size.
+    function appendCube (x, y, z, size) {
       var halfSize = size * 0.5;
-      appendBox(x-halfSize, y-halfSize, z-halfSize,
-                x+halfSize, y+halfSize, z+halfSize);
+      appendBox(x - halfSize, y - halfSize, z - halfSize,
+                x + halfSize, y + halfSize, z + halfSize);
     }
 
     // Main "island", covers where the user can safely stand. Top of the cube
     // (the ground the user stands on) should be at Y=0 to align with users
     // floor. X=0 and Z=0 should be at the center of the users play space.
-    appendBox(-width*0.5, -width, -depth*0.5, width*0.5, 0, depth*0.5);
+    appendBox(-width * 0.5, -width, -depth * 0.5, width * 0.5, 0, depth * 0.5);
 
     // A sprinkling of other cubes to make things more visually interesting.
     appendCube(1.1, 0.3, (-depth * 0.5) - 0.8, 0.5);
@@ -169,9 +169,9 @@ var VRCubeIsland = (function() {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
 
     this.indexCount = cubeIndices.length;
-  }
+  };
 
-  CubeIsland.prototype.render = function(projectionMat, modelViewMat, stats) {
+  CubeIsland.prototype.render = function (projectionMat, modelViewMat, stats) {
     var gl = this.gl;
     var program = this.program;
 
@@ -198,13 +198,13 @@ var VRCubeIsland = (function() {
     if (stats) {
       // To ensure that the FPS counter is visible in VR mode we have to
       // render it as part of the scene.
-      mat4.fromTranslation(this.statsMat, [0, 1.5, -this.depth*0.5]);
+      mat4.fromTranslation(this.statsMat, [0, 1.5, -this.depth * 0.5]);
       mat4.scale(this.statsMat, this.statsMat, [0.5, 0.5, 0.5]);
       mat4.rotateX(this.statsMat, this.statsMat, -0.75);
       mat4.multiply(this.statsMat, modelViewMat, this.statsMat);
       stats.render(projectionMat, this.statsMat);
     }
-  }
+  };
 
   return CubeIsland;
 })();

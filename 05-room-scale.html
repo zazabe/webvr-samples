@@ -42,7 +42,7 @@ found in the LICENSE file.
   <body>
     <canvas id="webgl-canvas"></canvas>
     <script>
-      /* global mat4, WGLUCubeIsland, WGLUTextureLoader, VRSamplesUtil */
+      /* global mat4, vec3, VRCubeIsland, WGLUDebugGeometry, WGLUStats, WGLUTextureLoader, VRSamplesUtil */
       (function () {
       "use strict";
 
@@ -68,7 +68,7 @@ found in the LICENSE file.
       var stats = null;
       var debugGeom = null;
 
-      function initWebGL(preserveDrawingBuffer) {
+      function initWebGL (preserveDrawingBuffer) {
         var glAttribs = {
           antialias: !VRSamplesUtil.isMobile(),
           preserveDrawingBuffer: preserveDrawingBuffer
@@ -144,7 +144,7 @@ found in the LICENSE file.
               VRSamplesUtil.addInfo("VRDisplay did not report stageParameters", 3000);
               // Resetting the pose in standing space isn't useful, because the
               // headset should always be relative to the physical room.
-              VRSamplesUtil.addButton("Reset Pose", "R", null, function() { vrDisplay.resetPose(); });
+              VRSamplesUtil.addButton("Reset Pose", "R", null, function () { vrDisplay.resetPose(); });
             }
 
             if (vrDisplay.capabilities.canPresent)
@@ -174,7 +174,7 @@ found in the LICENSE file.
         }
       }
 
-      function getPoseMatrix(out, pose) {
+      function getPoseMatrix (out, pose) {
         orientation = pose.orientation;
         position = pose.position;
         if (!orientation) { orientation = [0, 0, 0, 1]; }
