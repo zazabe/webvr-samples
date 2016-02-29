@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-var VRSamplesUtil = (function() {
+window.VRSamplesUtil = (function () {
 
   "use strict";
 
   // Lifted from the WebVR Polyfill
-  function isMobile() {
+  function isMobile () {
     return /Android/i.test(navigator.userAgent) ||
       /iPhone|iPad|iPod/i.test(navigator.userAgent);
   }
 
-  function getMessageContainer() {
+  function getMessageContainer () {
     var messageContainer = document.getElementById("vr-sample-message-container");
     if (!messageContainer) {
       messageContainer = document.createElement("div");
@@ -31,7 +31,7 @@ var VRSamplesUtil = (function() {
     return messageContainer;
   }
 
-  function addMessageElement(message, backgroundColor) {
+  function addMessageElement (message, backgroundColor) {
     var messageElement = document.createElement("div");
     messageElement.classList.add = "vr-sample-message";
     messageElement.style.color = "#FFF";
@@ -50,20 +50,20 @@ var VRSamplesUtil = (function() {
   }
 
   // Makes the given element fade out and remove itself from the DOM after the
-  // given timeout
-  function makeToast(element, timeout) {
+  // given timeout.
+  function makeToast (element, timeout) {
     element.style.transition = "opacity 0.5s ease-in-out";
     element.style.opacity = "1";
-    setTimeout(function() {
+    setTimeout(function () {
       element.style.opacity = "0";
-      setTimeout(function() {
+      setTimeout(function () {
         if (element.parentElement)
           element.parentElement.removeChild(element);
       }, 500);
     }, timeout);
   }
 
-  function addError(message, timeout) {
+  function addError (message, timeout) {
     var element = addMessageElement("<b>ERROR:</b> " + message, "#D33");
 
     if (timeout) {
@@ -73,7 +73,7 @@ var VRSamplesUtil = (function() {
     return element;
   }
 
-  function addInfo(message, timeout) {
+  function addInfo (message, timeout) {
     var element = addMessageElement(message, "#22A");
 
     if (timeout) {
@@ -83,7 +83,7 @@ var VRSamplesUtil = (function() {
     return element;
   }
 
-  function getButtonContainer() {
+  function getButtonContainer () {
     var buttonContainer = document.getElementById("vr-sample-button-container");
     if (!buttonContainer) {
       buttonContainer = document.createElement("div");
@@ -102,7 +102,7 @@ var VRSamplesUtil = (function() {
     return buttonContainer;
   }
 
-  function addButtonElement(message, key, icon) {
+  function addButtonElement (message, key, icon) {
     var buttonElement = document.createElement("div");
     buttonElement.classList.add = "vr-sample-button";
     buttonElement.style.color = "#FFF";
@@ -138,12 +138,12 @@ var VRSamplesUtil = (function() {
     return buttonElement;
   }
 
-  function addButton(message, key, icon, callback) {
+  function addButton (message, key, icon, callback) {
     var keyListener = null;
     if (key) {
       var keyCode = key.charCodeAt(0);
       keyListener = function (event) {
-        if (event.keyCode == keyCode) {
+        if (event.keyCode === keyCode) {
           callback(event);
         }
       };
@@ -151,14 +151,14 @@ var VRSamplesUtil = (function() {
     }
     var element = addButtonElement(message, key, icon);
     element.addEventListener("click", callback, false);
-    
-    return { 
+
+    return {
       element: element,
       keyListener: keyListener
     };
   }
 
-  function removeButton(button) {
+  function removeButton (button) {
     if (!button)
       return;
     if (button.element.parentElement)

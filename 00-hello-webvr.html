@@ -37,9 +37,11 @@ found in the LICENSE file.
   </head>
   <body>
     <script>
+      /* global VRSamplesUtil */
+      (function () {
       "use strict";
 
-      function buildVRElement(vrDisplay) {
+      function buildVRElement (vrDisplay) {
         var vrElement = document.createElement("div");
         vrElement.classList.add("vr-display");
 
@@ -50,31 +52,31 @@ found in the LICENSE file.
         // This function walks through the object recursively and builds a
         // list of all the properties and values. It's a quick and dirty way
         // to dump the contents of a VRDisplay onto the screen.
-        function buildMemberList(obj) {
+        function buildMemberList (obj) {
           var ul = document.createElement("ul");
 
           for (var key in obj) {
-            if (typeof obj[key] == "function") {
+            if (typeof obj[key] === "function") {
               continue;
             }
 
             var li = document.createElement("li");
 
-            if (obj[key] == null) {
+            if (obj[key] === null) {
               li.innerHTML = "<b>" + key + ":</b> <i>null</i>";
-            } else if (Object.prototype.toString.call(obj[key]) == "[object Float32Array]") {
+            } else if (Object.prototype.toString.call(obj[key]) === "[object Float32Array]") {
               // This formatting ensures that the array prints at a fixed size
               // as the values in the array change.
               var value = "";
               for (var idx in obj[key]) {
-                if (value != "")
+                if (value !== "")
                   value += ",";
                 if (obj[key][idx] >= 0)
                   value += " ";
                 value += obj[key][idx].toFixed(2);
               }
               li.innerHTML = "<b>" + key + ":</b> <span class='float-array'>[" + value + " ]</span>";
-            } else if (typeof obj[key] == "object") {
+            } else if (typeof obj[key] === "object") {
               li.innerHTML = "<b>" + key + ":</b>";
               li.appendChild(buildMemberList(obj[key]));
             } else {
@@ -87,7 +89,7 @@ found in the LICENSE file.
           return ul;
         }
 
-        var memberUL = buildMemberList(vrDisplay)
+        var memberUL = buildMemberList(vrDisplay);
 
         var pose = vrDisplay.getPose();
         var poseLI = document.createElement("li");
@@ -111,7 +113,7 @@ found in the LICENSE file.
         memberUL.appendChild(rightEyeLI);
 
         // Update the values that may change frame-to-frame
-        function onAnimationFrame() {
+        function onAnimationFrame () {
           vrDisplay.requestAnimationFrame(onAnimationFrame);
 
           pose = vrDisplay.getPose();
@@ -152,6 +154,7 @@ found in the LICENSE file.
       } else {
         VRSamplesUtil.addError("Your browser does not support WebVR. See <a href='http://webvr.info'>webvr.info</a> for assistance.");
       }
+      })();
     </script>
   </body>
 </html>

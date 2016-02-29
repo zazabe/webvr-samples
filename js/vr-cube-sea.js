@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-var VRCubeSea = (function() {
+/* global mat4, WGLUProgram */
 
+window.VRCubeSea = (function () {
   "use strict";
 
   var cubeSeaVS = [
@@ -29,7 +30,7 @@ var VRCubeSea = (function() {
     "}",
   ].join("\n");
 
-  var CubeSea = function(gl, texture) {
+  var CubeSea = function (gl, texture) {
     this.gl = gl;
 
     this.statsMat = mat4.create();
@@ -48,73 +49,73 @@ var VRCubeSea = (function() {
     var cubeVerts = [];
     var cubeIndices = [];
 
-    // Build a single cube
-    function appendCube(x, y, z) {
+    // Build a single cube.
+    function appendCube (x, y, z) {
       if (!x && !y && !z) {
-        // Don't create a cube in the center
+        // Don't create a cube in the center.
         return;
       }
 
       var size = 0.2;
       // Bottom
       var idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+1, idx+2);
-      cubeIndices.push(idx, idx+2, idx+3);
+      cubeIndices.push(idx, idx + 1, idx + 2);
+      cubeIndices.push(idx, idx + 2, idx + 3);
 
-      cubeVerts.push(x-size, y-size, z-size, 0.0, 1.0);
-      cubeVerts.push(x+size, y-size, z-size, 1.0, 1.0);
-      cubeVerts.push(x+size, y-size, z+size, 1.0, 0.0);
-      cubeVerts.push(x-size, y-size, z+size, 0.0, 0.0);
+      cubeVerts.push(x - size, y - size, z - size, 0.0, 1.0);
+      cubeVerts.push(x + size, y - size, z - size, 1.0, 1.0);
+      cubeVerts.push(x + size, y - size, z + size, 1.0, 0.0);
+      cubeVerts.push(x - size, y - size, z + size, 0.0, 0.0);
 
       // Top
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+2, idx+1);
-      cubeIndices.push(idx, idx+3, idx+2);
+      cubeIndices.push(idx, idx + 2, idx + 1);
+      cubeIndices.push(idx, idx + 3, idx + 2);
 
-      cubeVerts.push(x-size, y+size, z-size, 0.0, 0.0);
-      cubeVerts.push(x+size, y+size, z-size, 1.0, 0.0);
-      cubeVerts.push(x+size, y+size, z+size, 1.0, 1.0);
-      cubeVerts.push(x-size, y+size, z+size, 0.0, 1.0);
+      cubeVerts.push(x - size, y + size, z - size, 0.0, 0.0);
+      cubeVerts.push(x + size, y + size, z - size, 1.0, 0.0);
+      cubeVerts.push(x + size, y + size, z + size, 1.0, 1.0);
+      cubeVerts.push(x - size, y + size, z + size, 0.0, 1.0);
 
       // Left
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+2, idx+1);
-      cubeIndices.push(idx, idx+3, idx+2);
+      cubeIndices.push(idx, idx + 2, idx + 1);
+      cubeIndices.push(idx, idx + 3, idx + 2);
 
-      cubeVerts.push(x-size, y-size, z-size, 0.0, 1.0);
-      cubeVerts.push(x-size, y+size, z-size, 0.0, 0.0);
-      cubeVerts.push(x-size, y+size, z+size, 1.0, 0.0);
-      cubeVerts.push(x-size, y-size, z+size, 1.0, 1.0);
+      cubeVerts.push(x - size, y - size, z - size, 0.0, 1.0);
+      cubeVerts.push(x - size, y + size, z - size, 0.0, 0.0);
+      cubeVerts.push(x - size, y + size, z + size, 1.0, 0.0);
+      cubeVerts.push(x - size, y - size, z + size, 1.0, 1.0);
 
       // Right
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+1, idx+2);
-      cubeIndices.push(idx, idx+2, idx+3);
+      cubeIndices.push(idx, idx + 1, idx + 2);
+      cubeIndices.push(idx, idx + 2, idx + 3);
 
-      cubeVerts.push(x+size, y-size, z-size, 1.0, 1.0);
-      cubeVerts.push(x+size, y+size, z-size, 1.0, 0.0);
-      cubeVerts.push(x+size, y+size, z+size, 0.0, 0.0);
-      cubeVerts.push(x+size, y-size, z+size, 0.0, 1.0);
+      cubeVerts.push(x + size, y - size, z - size, 1.0, 1.0);
+      cubeVerts.push(x + size, y + size, z - size, 1.0, 0.0);
+      cubeVerts.push(x + size, y + size, z + size, 0.0, 0.0);
+      cubeVerts.push(x + size, y - size, z + size, 0.0, 1.0);
 
       // Back
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+2, idx+1);
-      cubeIndices.push(idx, idx+3, idx+2);
+      cubeIndices.push(idx, idx + 2, idx + 1);
+      cubeIndices.push(idx, idx + 3, idx + 2);
 
-      cubeVerts.push(x-size, y-size, z-size, 1.0, 1.0);
-      cubeVerts.push(x+size, y-size, z-size, 0.0, 1.0);
-      cubeVerts.push(x+size, y+size, z-size, 0.0, 0.0);
-      cubeVerts.push(x-size, y+size, z-size, 1.0, 0.0);
+      cubeVerts.push(x - size, y - size, z - size, 1.0, 1.0);
+      cubeVerts.push(x + size, y - size, z - size, 0.0, 1.0);
+      cubeVerts.push(x + size, y + size, z - size, 0.0, 0.0);
+      cubeVerts.push(x - size, y + size, z - size, 1.0, 0.0);
 
       // Front
       idx = cubeVerts.length / 5.0;
-      cubeIndices.push(idx, idx+1, idx+2);
-      cubeIndices.push(idx, idx+2, idx+3);
+      cubeIndices.push(idx, idx + 1, idx + 2);
+      cubeIndices.push(idx, idx + 2, idx + 3);
 
-      cubeVerts.push(x-size, y-size, z+size, 0.0, 1.0);
-      cubeVerts.push(x+size, y-size, z+size, 1.0, 1.0);
-      cubeVerts.push(x+size, y+size, z+size, 1.0, 0.0);
-      cubeVerts.push(x-size, y+size, z+size, 0.0, 0.0);
+      cubeVerts.push(x - size, y - size, z + size, 0.0, 1.0);
+      cubeVerts.push(x + size, y - size, z + size, 1.0, 1.0);
+      cubeVerts.push(x + size, y + size, z + size, 1.0, 0.0);
+      cubeVerts.push(x - size, y + size, z + size, 0.0, 0.0);
     }
 
     var gridSize = 10;
@@ -123,7 +124,7 @@ var VRCubeSea = (function() {
     for (var x = 0; x < gridSize; ++x) {
       for (var y = 0; y < gridSize; ++y) {
         for (var z = 0; z < gridSize; ++z) {
-          appendCube(x - (gridSize/2), y - (gridSize/2), z - (gridSize/2));
+          appendCube(x - (gridSize / 2), y - (gridSize / 2), z - (gridSize / 2));
         }
       }
     }
@@ -137,9 +138,9 @@ var VRCubeSea = (function() {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeIndices), gl.STATIC_DRAW);
 
     this.indexCount = cubeIndices.length;
-  }
+  };
 
-  CubeSea.prototype.render = function(projectionMat, modelViewMat, stats) {
+  CubeSea.prototype.render = function (projectionMat, modelViewMat, stats) {
     var gl = this.gl;
     var program = this.program;
 
@@ -165,14 +166,14 @@ var VRCubeSea = (function() {
 
     if (stats) {
       // To ensure that the FPS counter is visible in VR mode we have to
-        // render it as part of the scene.
-        mat4.fromTranslation(this.statsMat, [0, -0.3, -0.5]);
-        mat4.scale(this.statsMat, this.statsMat, [0.3, 0.3, 0.3]);
-        mat4.rotateX(this.statsMat, this.statsMat, -0.75);
-        mat4.multiply(this.statsMat, modelViewMat, this.statsMat);
-        stats.render(projectionMat, this.statsMat);
+      // render it as part of the scene.
+      mat4.fromTranslation(this.statsMat, [0, -0.3, -0.5]);
+      mat4.scale(this.statsMat, this.statsMat, [0.3, 0.3, 0.3]);
+      mat4.rotateX(this.statsMat, this.statsMat, -0.75);
+      mat4.multiply(this.statsMat, modelViewMat, this.statsMat);
+      stats.render(projectionMat, this.statsMat);
     }
-  }
+  };
 
   return CubeSea;
 })();

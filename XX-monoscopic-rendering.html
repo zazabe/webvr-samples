@@ -46,7 +46,7 @@ found in the LICENSE file.
   <body>
     <canvas id="webgl-canvas"></canvas>
     <script>
-      /* global mat4, WGLUCubeSea, WGLUTextureLoader, VRSamplesUtil */
+      /* global mat4, vec4, VRCubeSea, VRSamplesUtil, WGLUDebugGeometry, WGLUStats, WGLUTextureLoader */
       (function () {
       "use strict";
 
@@ -68,7 +68,7 @@ found in the LICENSE file.
       var stats = null;
       var debugGeom = null;
 
-      function initWebGL(preserveDrawingBuffer) {
+      function initWebGL (preserveDrawingBuffer) {
         var glAttribs = {
           antialias: !VRSamplesUtil.isMobile(),
           preserveDrawingBuffer: preserveDrawingBuffer
@@ -94,7 +94,7 @@ found in the LICENSE file.
       // WebVR-specific code begins here.
       // ================================
 
-      var calculateMonoView = (function() {
+      var calculateMonoView = (function () {
         // It's expensive to frequently recreate matricies and vectors, so we
         // use this pattern to cache them in a way that only makes them
         // accessible to the desired function.
@@ -102,7 +102,7 @@ found in the LICENSE file.
         var leftPlane = vec4.create();
         var rightPlane = vec4.create();
 
-        return function(vrDisplay) {
+        return function (vrDisplay) {
           var leftEye = vrDisplay.getEyeParameters("left");
 
           mat4.perspectiveFromFieldOfView(leftEyeProjection, leftEye.fieldOfView, 0.1, 1024.0);
@@ -136,7 +136,7 @@ found in the LICENSE file.
             leftUVBounds: [0, 0, monoWidth / eyeRenderWidth, 1],
             rightUVBounds: [(monoWidth - eyeRenderWidth) / monoWidth, 0, monoWidth / eyeRenderWidth, 1]
           };
-        }
+        };
       })();
 
       function onVRRequestPresent () {
@@ -179,7 +179,7 @@ found in the LICENSE file.
         navigator.getVRDisplays().then(function (displays) {
           if (displays.length > 0) {
             vrDisplay = displays[0];
-            VRSamplesUtil.addButton("Reset Pose", "R", null, function() { vrDisplay.resetPose(); });
+            VRSamplesUtil.addButton("Reset Pose", "R", null, function () { vrDisplay.resetPose(); });
 
             monoView = calculateMonoView(vrDisplay);
 
