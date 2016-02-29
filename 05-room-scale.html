@@ -54,6 +54,8 @@ found in the LICENSE file.
       var poseMat = mat4.create();
       var standingPosition = vec3.create();
       var vrPresentButton = null;
+      var orientation = [0, 0, 0, 1];
+      var position = [0, 0, 0];
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -173,8 +175,8 @@ found in the LICENSE file.
       }
 
       function getPoseMatrix(out, pose) {
-        var orientation = pose.orientation;
-        var position = pose.position;
+        orientation = pose.orientation;
+        position = pose.position;
         if (!orientation) { orientation = [0, 0, 0, 1]; }
         if (!position) { position = [0, 0, 0]; }
 
