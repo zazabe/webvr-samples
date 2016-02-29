@@ -56,10 +56,6 @@ found in the LICENSE file.
           var ul = document.createElement("ul");
 
           for (var key in obj) {
-            if (!obj.hasOwnProperty(key)) {
-              continue;
-            }
-
             if (typeof obj[key] === "function") {
               continue;
             }
@@ -73,9 +69,6 @@ found in the LICENSE file.
               // as the values in the array change.
               var value = "";
               for (var idx in obj[key]) {
-                if (!obj[key].hasOwnProperty(idx)) {
-                  continue;
-                }
                 if (value !== "")
                   value += ",";
                 if (obj[key][idx] >= 0)
