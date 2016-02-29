@@ -91,7 +91,7 @@ found in the LICENSE file.
       }
 
       // ================================
-      // WebVR specific code begins here.
+      // WebVR-specific code begins here.
       // ================================
 
       var calculateMonoView = (function() {
@@ -193,6 +193,9 @@ found in the LICENSE file.
             VRSamplesUtil.addInfo("WebVR supported, but no VRDisplays found.", 3000);
           }
         });
+      } else if (navigator.getVRDevices) {
+        initWebGL(false);
+        VRSamplesUtil.addError("Your browser supports WebVR but not the latest version. See <a href='http://webvr.info'>webvr.info</a> for more info.");
       } else {
         initWebGL(false);
         VRSamplesUtil.addError("Your browser does not support WebVR. See <a href='http://webvr.info'>webvr.info</a> for assistance.");
