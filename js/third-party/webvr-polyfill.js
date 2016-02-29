@@ -76,7 +76,6 @@ VRDisplay.prototype.requestPresent = function(layer) {
         if (self.isPresenting) {
           if (screen.orientation && screen.orientation.lock)
             screen.orientation.lock('landscape-primary');
-          self.wakelock_.request();
           self.waitingForPresent_ = false;
           self.beginPresent_();
           resolve();
@@ -94,6 +93,7 @@ VRDisplay.prototype.requestPresent = function(layer) {
 
         self.removeFullscreenListeners_();
 
+        self.wakelock_.release();
         self.waitingForPresent_ = false;
         self.isPresenting = false;
 
@@ -104,6 +104,7 @@ VRDisplay.prototype.requestPresent = function(layer) {
           onFullscreenChange, onFullscreenError);
 
       if (Util.requestFullscreen(layer.source)) {
+        self.wakelock_.request();
         self.waitingForPresent_ = true;
       } else if (Util.isIOS()) {
         // *sigh* Just fake it.
@@ -126,6 +127,7 @@ VRDisplay.prototype.exitPresent = function() {
   var wasPresenting = this.isPresenting;
   this.isPresenting = false;
   this.layer_ = null;
+  this.wakelock_.release();
 
   return new Promise(function(resolve, reject) {
     if (wasPresenting) {
@@ -359,7 +361,7 @@ function CardboardDistorter(gl) {
   this.uniforms = getProgramUniforms(gl, this.program);
 
   this.viewportOffsetScale = new Float32Array(8);
-  this.setViewports();
+  this.setTextureBounds();
 
   this.vertexBuffer = gl.createBuffer();
   this.indexBuffer = gl.createBuffer();
