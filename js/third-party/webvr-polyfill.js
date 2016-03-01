@@ -341,8 +341,8 @@ function CardboardDistorter(gl) {
   this.gl = gl;
   this.ctxAttribs = gl.getContextAttributes();
 
-  this.meshWidth = 40;
-  this.meshHeight = 40;
+  this.meshWidth = 20;
+  this.meshHeight = 20;
 
   this.bufferWidth = gl.drawingBufferWidth;
   this.bufferHeight = gl.drawingBufferHeight;
@@ -412,12 +412,26 @@ CardboardDistorter.prototype.onResize = function() {
   var self = this;
 
   var glState = [
+    gl.SCISSOR_TEST,
+    gl.COLOR_WRITEMASK,
+    gl.VIEWPORT,
+    gl.COLOR_CLEAR_VALUE,
     gl.FRAMEBUFFER_BINDING,
     gl.RENDERBUFFER_BINDING,
     gl.TEXTURE_BINDING_2D, gl.TEXTURE0,
   ];
 
   WGLUPreserveGLState(gl, glState, function(gl) {
+    // Bind real backbuffer and clear it once. We don't need to clear it again
+    // after that because we're overwriting the same area every frame.
+    self.realBindFramebuffer.call(gl, gl.FRAMEBUFFER, null);
+
+    gl.disable(gl.SCISSOR_TEST);
+    gl.colorMask(true, true, true, true);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
     // Now bind and resize the fake backbuffer
     self.realBindFramebuffer.call(gl, gl.FRAMEBUFFER, self.framebuffer);
 
@@ -556,7 +570,6 @@ CardboardDistorter.prototype.submitFrame = function() {
     gl.SCISSOR_TEST,
     gl.STENCIL_TEST,
     gl.COLOR_WRITEMASK,
-    gl.COLOR_CLEAR_VALUE,
     gl.VIEWPORT,
 
     gl.FRAMEBUFFER_BINDING,
@@ -577,10 +590,7 @@ CardboardDistorter.prototype.submitFrame = function() {
     gl.disable(gl.SCISSOR_TEST);
     gl.disable(gl.STENCIL_TEST);
     gl.colorMask(true, true, true, true);
-    gl.clearColor(0, 0, 0, 1);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-
-    gl.clear(gl.COLOR_BUFFER_BIT);
 
     // Bind distortion program and mesh
     gl.useProgram(self.program);

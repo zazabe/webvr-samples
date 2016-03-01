@@ -55,6 +55,10 @@ found in the LICENSE file.
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
       var glAttribs = {
+        // An alpha channel on the backbuffer is not necessary for many WebVR
+        // scenes. Disable it when unneeded to save memory/performance on some
+        // systems.
+        alpha: false,
         // Disable antialiasing on mobile devices for performance reasons.
         antialias: !VRSamplesUtil.isMobile()
       };

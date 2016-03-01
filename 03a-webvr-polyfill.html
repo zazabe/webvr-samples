@@ -74,7 +74,8 @@ found in the LICENSE file.
       // WebGL setup.
       var webglCanvas = document.getElementById("webgl-canvas");
       var glAttribs = {
-        antialias: !VRSamplesUtil.isMobile()
+        alpha: false,
+        antialias: !VRSamplesUtil.isMobile(),
       };
       var gl = webglCanvas.getContext("webgl", glAttribs);
       gl.clearColor(0.1, 0.2, 0.3, 1.0);
