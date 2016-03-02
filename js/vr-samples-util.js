@@ -25,6 +25,7 @@ window.VRSamplesUtil = (function () {
       messageContainer.style.right = "0";
       messageContainer.style.margin = "0";
       messageContainer.style.padding = "0";
+      messageContainer.style.pointerEvents = "none";
       messageContainer.align = "center";
       document.body.appendChild(messageContainer);
     }
@@ -96,6 +97,7 @@ window.VRSamplesUtil = (function () {
       buttonContainer.style.right = "0";
       buttonContainer.style.margin = "0";
       buttonContainer.style.padding = "0";
+      buttonContainer.style.pointerEvents = "none";
       buttonContainer.align = "right";
       document.body.appendChild(buttonContainer);
     }
