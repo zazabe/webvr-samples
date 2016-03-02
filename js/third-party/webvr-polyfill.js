@@ -915,19 +915,23 @@ CardboardUI.prototype.onResize = function() {
     vertices.push(midline + lineWidth, buttonHeight);
     vertices.push(midline + lineWidth, gl.drawingBufferHeight);
 
-    // Build gear
-    var n = Angles.length * 6;
-    for (var i = 0; i <= n; i++) {
-      var theta = (i / Angles.length) * kAnglePerGearSection + Angles[i % Angles.length];
+    function addGearSegment(theta, r) {
       var angle = (90 - theta) * DEG2RAD;
       var x = Math.cos(angle);
       var y = Math.sin(angle);
-      var mod = Util.pingPong(theta, kAnglePerGearSection / 2);
-      var lerp = (mod - kOuterRimEndAngle) / (kInnerRimBeginAngle - kOuterRimEndAngle);
-      var r = Util.lerp(kOuterRadius, kMiddleRadius, lerp);
-
       vertices.push(kInnerRadius * x * buttonScale + midline, kInnerRadius * y * buttonScale + buttonScale);
       vertices.push(r * x * buttonScale + midline, r * y * buttonScale + buttonScale);
+    }
+
+    // Build gear
+    for (var i = 0; i <= 6; i++) {
+      var segmentTheta = i * kAnglePerGearSection;
+
+      addGearSegment(segmentTheta, kOuterRadius);
+      addGearSegment(segmentTheta + kOuterRimEndAngle, kOuterRadius);
+      addGearSegment(segmentTheta + kInnerRimBeginAngle, kMiddleRadius);
+      addGearSegment(segmentTheta + (kAnglePerGearSection - kInnerRimBeginAngle), kMiddleRadius);
+      addGearSegment(segmentTheta + (kAnglePerGearSection - kOuterRimEndAngle), kOuterRadius);
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, self.vertexBuffer);
@@ -1119,7 +1123,9 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
   }
 
   // TODO: Add Listener for gear click
-  //this.cardboardUI_.listen(callback)
+  this.cardboardUI_.listen(function() {
+    console.log("Cardboard configuration not yet implemented.");
+  })
 };
 
 CardboardVRDisplay.prototype.endPresent_ = function() {
