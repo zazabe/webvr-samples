@@ -457,7 +457,8 @@ CardboardDistorter.prototype.onResize = function() {
     }
   });
 
-  this.cardboardUI.onResize();
+  if (this.cardboardUI)
+    this.cardboardUI.onResize();
 };
 
 
