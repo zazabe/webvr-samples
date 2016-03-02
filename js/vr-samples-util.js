@@ -25,7 +25,6 @@ window.VRSamplesUtil = (function () {
       messageContainer.style.right = "0";
       messageContainer.style.margin = "0";
       messageContainer.style.padding = "0";
-      messageContainer.style.pointerEvents = "none";
       messageContainer.align = "center";
       document.body.appendChild(messageContainer);
     }
@@ -42,7 +41,6 @@ window.VRSamplesUtil = (function () {
     messageElement.style.display = "inline-block";
     messageElement.style.margin = "0.5em";
     messageElement.style.padding = "0.75em";
-    messageElement.style.pointerEvents = "auto";
 
     messageElement.innerHTML = message;
 
@@ -98,7 +96,6 @@ window.VRSamplesUtil = (function () {
       buttonContainer.style.right = "0";
       buttonContainer.style.margin = "0";
       buttonContainer.style.padding = "0";
-      buttonContainer.style.pointerEvents = "none";
       buttonContainer.align = "right";
       document.body.appendChild(buttonContainer);
     }
@@ -118,7 +115,6 @@ window.VRSamplesUtil = (function () {
     buttonElement.style.margin = "0.5em";
     buttonElement.style.padding = "0.75em";
     buttonElement.style.cursor = "pointer";
-    buttonElement.style.pointerEvents = "auto";
     buttonElement.align = "center";
 
     if (icon) {
