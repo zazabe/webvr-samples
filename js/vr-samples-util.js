@@ -42,6 +42,7 @@ window.VRSamplesUtil = (function () {
     messageElement.style.display = "inline-block";
     messageElement.style.margin = "0.5em";
     messageElement.style.padding = "0.75em";
+    messageElement.style.pointerEvents = "auto";
 
     messageElement.innerHTML = message;
 
@@ -117,6 +118,7 @@ window.VRSamplesUtil = (function () {
     buttonElement.style.margin = "0.5em";
     buttonElement.style.padding = "0.75em";
     buttonElement.style.cursor = "pointer";
+    buttonElement.style.pointerEvents = "auto";
     buttonElement.align = "center";
 
     if (icon) {
