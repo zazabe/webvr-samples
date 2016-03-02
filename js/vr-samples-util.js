@@ -150,7 +150,10 @@ window.VRSamplesUtil = (function () {
       document.addEventListener("keydown", keyListener, false);
     }
     var element = addButtonElement(message, key, icon);
-    element.addEventListener("click", callback, false);
+    element.addEventListener("click", function (event) {
+      callback(event);
+      event.preventDefault();
+    }, false);
 
     return {
       element: element,

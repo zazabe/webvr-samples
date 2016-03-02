@@ -281,9 +281,9 @@ module.exports.PositionSensorVRDevice = PositionSensorVRDevice;
 var Util = _dereq_('./util.js');
 var WGLUPreserveGLState = _dereq_('./deps/wglu-preserve-state.js');
 
-function lerp(a, b, t) {
-  return a + ((b - a) * t);
-}
+// Ideally should be 1.0 to match screen resolution. Many mobile devices are
+// fill-rate bound, though, so we may scale down for performance.
+var CANVAS_OVERSCALE = 1.0
 
 function linkProgram(gl, vertexSource, fragmentSource, attribLocationMap) {
   // No error checking for brevity.
@@ -384,12 +384,15 @@ function CardboardDistorter(gl) {
   this.renderTarget = gl.createTexture();
   this.framebuffer = gl.createFramebuffer();
 
+  this.depthStencilBuffer = null;
   this.depthBuffer = null;
-  if (this.ctxAttribs.depth)
-    this.depthBuffer = gl.createRenderbuffer();
-
   this.stencilBuffer = null;
-  if (this.ctxAttribs.stencil)
+
+  if (this.ctxAttribs.depth && this.ctxAttribs.stencil)
+    this.depthStencilBuffer = gl.createRenderbuffer();
+  else if (this.ctxAttribs.depth)
+    this.depthBuffer = gl.createRenderbuffer();
+  else if (this.ctxAttribs.stencil)
     this.stencilBuffer = gl.createRenderbuffer();
 
   this.onResize();
@@ -411,6 +414,8 @@ CardboardDistorter.prototype.destroy = function() {
   gl.deleteBuffer(this.indexBuffer);
   gl.deleteTexture(this.renderTarget);
   gl.deleteFramebuffer(this.framebuffer);
+  if (this.depthStencilBuffer)
+    gl.deleteRenderbuffer(this.depthStencilBuffer);
   if (this.depthBuffer)
     gl.deleteRenderbuffer(this.depthBuffer);
   if (this.stencilBuffer)
@@ -459,18 +464,24 @@ CardboardDistorter.prototype.onResize = function() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, self.renderTarget, 0);
 
-    if (self.ctxAttribs.depth) {
+    if (self.ctxAttribs.depth && self.ctxAttribs.stencil) {
+      gl.bindRenderbuffer(gl.RENDERBUFFER, self.depthStencilBuffer);
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL,
+          self.bufferWidth, self.bufferHeight);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT,
+          gl.RENDERBUFFER, self.depthStencilBuffer);
+    } else if (self.ctxAttribs.depth) {
       gl.bindRenderbuffer(gl.RENDERBUFFER, self.depthBuffer);
       gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16,
           self.bufferWidth, self.bufferHeight);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, self.depthBuffer);
-    }
-
-    if (self.ctxAttribs.stencil) {
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,
+          gl.RENDERBUFFER, self.depthBuffer);
+    } else if (self.ctxAttribs.stencil) {
       gl.bindRenderbuffer(gl.RENDERBUFFER, self.stencilBuffer);
-      gl.renderbufferStorage(gl.RENDERBUFFER, gl.GL_STENCIL_INDEX8,
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8,
           self.bufferWidth, self.bufferHeight);
-      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT, gl.RENDERBUFFER, self.stencilBuffer);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.STENCIL_ATTACHMENT,
+          gl.RENDERBUFFER, self.stencilBuffer);
     }
 
     if(!gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE) {
@@ -488,8 +499,8 @@ CardboardDistorter.prototype.patch = function() {
   var self = this;
   var canvas = this.gl.canvas;
 
-  canvas.width = Math.max(screen.width, screen.height) * window.devicePixelRatio; //Util.getScreenWidth();
-  canvas.height = Math.min(screen.width, screen.height) * window.devicePixelRatio;
+  canvas.width = Util.getScreenWidth() * CANVAS_OVERSCALE;
+  canvas.height = Util.getScreenHeight() * CANVAS_OVERSCALE;
 
   Object.defineProperty(canvas, 'width', {
     configurable: true,
@@ -593,6 +604,10 @@ CardboardDistorter.prototype.submitFrame = function() {
     gl.TEXTURE_BINDING_2D, gl.TEXTURE0
   ];
 
+  if (self.ctxAttribs.alpha) {
+    glState.push(gl.COLOR_CLEAR_VALUE);
+  }
+
   WGLUPreserveGLState(gl, glState, function(gl) {
     // Bind the real default framebuffer
     self.realBindFramebuffer.call(gl, gl.FRAMEBUFFER, null);
@@ -605,6 +620,13 @@ CardboardDistorter.prototype.submitFrame = function() {
     gl.disable(gl.STENCIL_TEST);
     gl.colorMask(true, true, true, true);
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+    // If the backbuffer has an alpha channel clear every frame so the page
+    // doesn't show through.
+    if (self.ctxAttribs.alpha) {
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
 
     // Bind distortion program and mesh
     gl.useProgram(self.program);
@@ -631,7 +653,6 @@ CardboardDistorter.prototype.submitFrame = function() {
 
     // If preserveDrawingBuffer == false clear the framebuffer
     if (!self.ctxAttribs.preserveDrawingBuffer) {
-      // TODO: Probably need to enforce color write and scissor state here.
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
   });
@@ -683,8 +704,8 @@ CardboardDistorter.prototype.computeMeshVertices_ = function(width, height, devi
         // the mesh.
         var s = u;
         var t = v;
-        var x = lerp(lensFrustum[0], lensFrustum[2], u);
-        var y = lerp(lensFrustum[3], lensFrustum[1], v);
+        var x = Util.lerp(lensFrustum[0], lensFrustum[2], u);
+        var y = Util.lerp(lensFrustum[3], lensFrustum[1], v);
         var d = Math.sqrt(x * x + y * y);
         var r = deviceInfo.distortion.distortInverse(d);
         var p = x * r / d;
@@ -736,8 +757,9 @@ CardboardDistorter.prototype.computeMeshIndices_ = function(width, height) {
       for (var i = 0; i < width; i++, vidx++) {
         if (i == 0 || j == 0)
           continue;
-        // Build a quad.  Lower right and upper left quadrants have quads with the triangle
-        // diagonal flipped to get the vignette to interpolate correctly.
+        // Build a quad.  Lower right and upper left quadrants have quads with
+        // the triangle diagonal flipped to get the vignette to interpolate
+        // correctly.
         if ((i <= halfwidth) == (j <= halfheight)) {
           // Quad diagonal lower left to upper right.
           indices[iidx++] = vidx;
@@ -788,6 +810,11 @@ var Eye = {
   LEFT: 'left',
   RIGHT: 'right'
 };
+
+// Ideally should be higher than 1.0 to compensate for distortion. That's highly
+// detrimental on fill-rate bound devices, though, so we're actually
+// underreporting the ideal canvas size for the polyfill.
+var CANVAS_OVERSCALE = 1.0;
 
 /**
  * VRDisplay based on mobile device parameters and DeviceMotion APIs.
@@ -841,16 +868,12 @@ CardboardVRDisplay.prototype.getEyeParameters = function(whichEye) {
     return null;
   }
 
-  // Ideally should be higher than 1.0 to compensate for distortion. May be
-  // detrimental on fill-rate bound devices, though.
-  var overscale = 1.0;
-
   return {
     fieldOfView: fieldOfView,
     offset: offset,
     // TODO: Should be able to provide better values than these.
-    renderWidth: this.deviceInfo_.device.width * 0.5 * overscale,
-    renderHeight: this.deviceInfo_.device.height * overscale,
+    renderWidth: this.deviceInfo_.device.width * 0.5 * CANVAS_OVERSCALE,
+    renderHeight: this.deviceInfo_.device.height * CANVAS_OVERSCALE,
   };
 };
 
@@ -3017,11 +3040,13 @@ FusionPoseSensor.prototype.getOrientation = function() {
 };
 
 FusionPoseSensor.prototype.resetPose = function() {
-  var euler = new THREE.Euler();
-  euler.setFromQuaternion(this.filter.getOrientation());
-  var yaw = euler.y;
-  console.log('resetPose with yaw: %f', yaw);
-  this.resetQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -yaw);
+  // Reduce to inverted yaw-only
+  this.resetQ.copy(this.filter.getOrientation());
+  this.resetQ.x = 0;
+  this.resetQ.y = 0;
+  this.resetQ.z *= -1;
+  this.resetQ.normalize();
+
   if (!WebVRConfig.TOUCH_PANNER_DISABLED) {
     this.touchPanner.resetSensor();
   }
@@ -3103,7 +3128,14 @@ var WebVRPolyfill = _dereq_('./webvr-polyfill.js');
 
 // Initialize a WebVRConfig just in case.
 window.WebVRConfig = window.WebVRConfig || {};
-new WebVRPolyfill();
+
+if (!window.WebVRConfig.DEFER_INITIALIZATION) {
+  new WebVRPolyfill();
+} else {
+  window.InitializeWebVRPolyfill = function() {
+   new WebVRPolyfill();
+  }
+}
 
 },{"./webvr-polyfill.js":20}],13:[function(_dereq_,module,exports){
 /*
@@ -3260,7 +3292,6 @@ MouseKeyboardVRDisplay.prototype.onMouseMove_ = function(e) {
   this.rotateStart_.copy(this.rotateEnd_);
 
   // Keep track of the cumulative euler angles.
-  var element = document.body;
   this.phi_ += 2 * Math.PI * this.rotateDelta_.y / screen.height * MOUSE_SPEED_Y;
   this.theta_ += 2 * Math.PI * this.rotateDelta_.x / screen.width * MOUSE_SPEED_X;
 
@@ -5784,6 +5815,10 @@ Util.base64 = function(mimeType, base64) {
 Util.clamp = function(value, min, max) {
   return Math.min(Math.max(min, value), max);
 };
+
+Util.lerp = function(a, b, t) {
+  return a + ((b - a) * t);
+}
 
 Util.isIOS = function() {
   return /iPad|iPhone|iPod/.test(navigator.platform);
