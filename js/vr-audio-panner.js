@@ -6,20 +6,19 @@
 
   'use strict';
 
-  // Master audio context.
-  // TODO: should we take care of the prefixed version of AudioContext?
-  // (i.e. Safari)
-  var _context = new AudioContext();
-
-  // Default settings for panning.
+  // Default settings for panning. Cone parameters are experimentally
+  // determined.
   var _PANNING_MODEL = 'HRTF';
   var _DISTANCE_MODEL = 'inverse';
   var _CONE_INNER_ANGLE = 60;
   var _CONE_OUTER_ANGLE = 120;
   var _CONE_OUTER_GAIN = 0.25;
 
-  // Global up vector.
-  var _UP_VECTOR = [0, 1, 0];
+  // Super-simple web audio version detection.
+  var _LEGACY_WEBAUDIO = window.hasOwnProperty('webkitAudioContext') && !window.hasOwnProperty('AudioContext');
+  
+  // Master audio context.
+  var _context = _LEGACY_WEBAUDIO ? new webkitAudioContext() : new AudioContext();
 
 
   /**
@@ -62,16 +61,16 @@
    * Start sound generation.
    */
   TestPulsor.prototype.start = function () {
-    this._osc.start();
-    this._mod.start();
+    this._osc.start(0);
+    this._mod.start(0);
   };
 
   /**
    * Stop sound generation. Once the source is stopped, it will be unusable.
    */
   TestPulsor.prototype.stop = function () {
-    this._osc.stop();
-    this._mod.stop();
+    this._osc.stop(0);
+    this._mod.stop(0);
   };
 
   /**
@@ -152,11 +151,11 @@
   };
 
   TestSource.prototype.start = function () {
-    this._src.start();
+    this._src.start(0);
   };
 
   TestSource.prototype.stop = function () {
-    this._src.stop();
+    this._src.stop(0);
   };
 
   TestSource.prototype.getPosition = function () {
@@ -189,10 +188,9 @@
 
   TestSource.prototype.getVisualizerScale = function () {
     this._analyser.getByteFrequencyData(this._analyserBuffer);
-    var total = 0;
-    for (var i = 0; i < this._analyserBuffer.length; ++i) {
+    for (var i = 0, total = 0; i < this._analyserBuffer.length; ++i)
       total += this._analyserBuffer[i];
-    }
+
     total /= this._analyserBuffer.length;
     return (total / 256.0);
   };
@@ -295,6 +293,14 @@
       this._reject(this._buffers);
   };
 
+
+  /**
+   * Returns true if the web audio implementation is outdated.
+   * @return {Boolean}
+   */
+  VRAudioPanner.isWebAudioOutdated = function () {
+    return _LEGACY_WEBAUDIO;
+  }
 
   /**
    * Static method for updating listener's position.
