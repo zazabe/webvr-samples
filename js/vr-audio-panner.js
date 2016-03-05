@@ -32,24 +32,23 @@
    * @param {Array} options.position x, y, z position in a array.
    */
   function TestSource (options) {
+
     this._src = _context.createBufferSource();
     this._out = _context.createGain();
     this._panner = _context.createPanner();
     this._analyser = _context.createAnalyser();
 
     this._src.connect(this._out);
-    this._out.connect(this._panner);
-    this._panner.connect(_context.destination);
-
     this._out.connect(this._analyser);
-
+    this._analyser.connect(this._panner);
+    this._panner.connect(_context.destination);
+    
     this._src.buffer = options.buffer;
-    this._src.detune.value = (options.detune || 0);
     this._src.loop = true;
     this._out.gain.value = options.gain;
 
     this._analyser.fftSize = 1024;
-    this._analyser.smoothingTimeConstant = 0.0;
+    this._analyser.smoothingTimeConstant = 0.85;
     this._lastRMSdB = 0.0;
 
     this._panner.panningModel = _PANNING_MODEL;
@@ -61,10 +60,16 @@
     this._position = [0, 0, 0];
     this._orientation = [1, 0, 0];
 
-    this._analyserBuffer = new Float32Array(this._analyser.fftSize);
+    this._analyserBuffer = new Uint8Array(this._analyser.fftSize);
+
+    if (!_LEGACY_WEBAUDIO) {
+      this._src.detune.value = (options.detune || 0);
+      this._analyserBuffer = new Float32Array(this._analyser.fftSize);
+    }
 
     this.setPosition(options.position);
     this.setOrientation(options.orientation);
+
   };
 
   TestSource.prototype.start = function () {
@@ -104,6 +109,20 @@
   };
 
   TestSource.prototype.getCubeScale = function () {
+    // Safari does not support getFloatTimeDomainData(), so fallback to the
+    // naive energy sum.
+    if (_LEGACY_WEBAUDIO) {
+      this._analyser.getByteFrequencyData(this._analyserBuffer);
+
+      for (var k = 0, total = 0; k < this._analyserBuffer.length; ++k)
+        total += this._analyserBuffer[k];
+      total /= this._analyserBuffer.length;
+
+      console.log(total / 256.0);
+
+      return (total / 256.0) * 1.5;
+    }
+
     this._analyser.getFloatTimeDomainData(this._analyserBuffer);
 
     // Calculate RMS and convert it to DB for perceptual loudness.
