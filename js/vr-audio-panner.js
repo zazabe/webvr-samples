@@ -118,8 +118,6 @@
         total += this._analyserBuffer[k];
       total /= this._analyserBuffer.length;
 
-      console.log(total / 256.0);
-
       return (total / 256.0) * 1.5;
     }
 
