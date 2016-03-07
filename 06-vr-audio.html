@@ -123,44 +123,50 @@ found in the LICENSE file.
       // WebAudio setup.
       var isAudioPannerReady = false;
       var drumSource, guitarSource, percSource;
+      var audioFileFormat = VRAudioPanner.isWebAudioOutdated() ? 'mp3' : 'ogg';
+
+      // For special Chromium build.
       var soundFileData = [
         {
           name: 'drums',
-          url: 'media/sound/drums.ogg'
+          url: 'media/sound/drums.' + audioFileFormat
         }, {
           name: 'guitar',
-          url: 'media/sound/guitar.ogg'
+          url: 'media/sound/guitar.' + audioFileFormat
         }, {
           name: 'perc',
-          url: 'media/sound/perc.ogg'
+          url: 'media/sound/perc.' + audioFileFormat
         }
       ];
 
       function initAudio (buffers) {
         drumSource = VRAudioPanner.createTestSource({
           buffer: buffers.get('drums'),
-          gain: 0.75,
+          gain: 0.65,
           position: [0, PLAYER_HEIGHT, 1],
           orientation: [0, 0, 0]
         });
 
         guitarSource = VRAudioPanner.createTestSource({
           buffer: buffers.get('guitar'),
-          gain: 0.75,
+          gain: 0.65,
           position: [-1, PLAYER_HEIGHT, 0],
           orientation: [0, 0, 0]
         });
 
         percSource = VRAudioPanner.createTestSource({
           buffer: buffers.get('perc'),
-          gain: 0.75,
+          gain: 0.65,
           position: [1, PLAYER_HEIGHT, 0],
           orientation: [0, 0, 0]
         });
 
-        drumSource.start();
-        guitarSource.start();
-        percSource.start();
+        var button = VRSamplesUtil.addButton("Start sound", null, null, function () { 
+          drumSource.start();
+          guitarSource.start();
+          percSource.start();
+          VRSamplesUtil.removeButton(button);
+        });
 
         isAudioPannerReady = true;
       }
@@ -168,10 +174,16 @@ found in the LICENSE file.
       // Initiate WebGL and then Audio.
       function init (preserveDrawingBuffer) {
         initWebGL(preserveDrawingBuffer);
+
         // Load sound files and then initiate WebAudio.
+        var infoElement = VRSamplesUtil.addInfo("Loading audio files...");
+        
         VRAudioPanner
           .loadAudioFiles(soundFileData, null)
-          .then(initAudio);
+          .then(function (buffers) {
+            VRSamplesUtil.makeToast(infoElement, 2000);
+            initAudio(buffers);
+          });
       }
 
 
@@ -278,12 +290,12 @@ found in the LICENSE file.
         cubeIsland.render(projectionMat, viewMat, stats);
 
         // Draw cubes at the position of each audio source.
-        // (Red: Drum, Green: Guitar, Blue: Percussion)
+        // (Red: Guitar, Green: Percussion, Blue: Drum)
         if (isAudioPannerReady) {
           debugGeom.bind(projectionMat, viewMat);
-          debugGeom.drawCube(null, drumSource.getPosition(), 0.1 + (0.1 * drumSource.getVisualizerScale()), [1, 0, 0, 1]);
-          debugGeom.drawCube(null, guitarSource.getPosition(), 0.1 + (0.1 * guitarSource.getVisualizerScale()), [0, 1, 0, 1]);
-          debugGeom.drawCube(null, percSource.getPosition(), 0.1 + (0.1 * percSource.getVisualizerScale()), [0, 0, 1, 1]);
+          debugGeom.drawCube(null, guitarSource.getPosition(), 0.1 + guitarSource.getCubeScale() * 0.5, [1, 0, 0, 1]);
+          debugGeom.drawCube(null, percSource.getPosition(), 0.25 + percSource.getCubeScale() * 0.35, [0, 1, 0, 1]);
+          debugGeom.drawCube(null, drumSource.getPosition(), 0.25 + drumSource.getCubeScale() * 0.35, [0, 0, 1, 1]);
         }
       }
 

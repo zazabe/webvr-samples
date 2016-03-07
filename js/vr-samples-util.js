@@ -175,6 +175,7 @@ window.VRSamplesUtil = (function () {
     addError: addError,
     addInfo: addInfo,
     addButton: addButton,
-    removeButton: removeButton
+    removeButton: removeButton,
+    makeToast: makeToast
   };
 })();

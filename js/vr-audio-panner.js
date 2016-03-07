@@ -6,114 +6,22 @@
 
   'use strict';
 
-  // Master audio context.
-  // TODO: should we take care of the prefixed version of AudioContext?
-  // (i.e. Safari)
-  var _context = new AudioContext();
-
-  // Default settings for panning.
+  // Default settings for panning. Cone parameters are experimentally
+  // determined.
   var _PANNING_MODEL = 'HRTF';
   var _DISTANCE_MODEL = 'inverse';
   var _CONE_INNER_ANGLE = 60;
   var _CONE_OUTER_ANGLE = 120;
   var _CONE_OUTER_GAIN = 0.25;
 
-  // Global up vector.
-  var _UP_VECTOR = [0, 1, 0];
+  // Super-simple web audio version detection.
+  var _LEGACY_WEBAUDIO = window.hasOwnProperty('webkitAudioContext') && !window.hasOwnProperty('AudioContext');
+  if (_LEGACY_WEBAUDIO)
+    console.log('[VRAudioPanner] outdated version of Web Audio API detected.');
 
-
-  /**
-   * A pulse generator with HRTF panning for testing purpose.
-   * @param {Object} options Default options.
-   * @param {Number} options.gain Sound object gain. (0.0~1.0)
-   * @param {Number} options.frequency Sound object frequency. (Hz)
-   * @param {Number} options.modSpeed Amp modulation speed. (Hz)
-   * @param {Array} options.position x, y, z position in an array.
-   */
-  function TestPulsor (options) {
-    // A simple amplitude-modulation pulse graph.
-    this._osc = _context.createOscillator();
-    this._mod = _context.createOscillator();
-    this._modAmp = _context.createGain();
-    this._out = _context.createGain();
-    this._panner = _context.createPanner();
-
-    this._mod.connect(this._modAmp).connect(this._out.gain);
-    this._osc.connect(this._out).connect(this._panner).connect(_context.destination);
-
-    this._osc.type = 'sawtooth';
-    this._mod.type = 'square';
-    this._osc.frequency.value = options.frequency;
-    this._mod.frequency.value = options.modSpeed;
-    this._modAmp.gain.value = options.gain;
-    this._out.gain.value = options.gain;
-
-    this._panner.panningModel = _PANNING_MODEL;
-    this._panner.distanceModel = _DISTANCE_MODEL;
-
-    this._position = [0, 0, 0];
-    this._orientation = [1, 0, 0];
-
-    this.setPosition(options.position);
-    this.setOrientation(options.orientation);
-  };
-
-  /**
-   * Start sound generation.
-   */
-  TestPulsor.prototype.start = function () {
-    this._osc.start();
-    this._mod.start();
-  };
-
-  /**
-   * Stop sound generation. Once the source is stopped, it will be unusable.
-   */
-  TestPulsor.prototype.stop = function () {
-    this._osc.stop();
-    this._mod.stop();
-  };
-
-  /**
-   * Get the current position in 3D vector.
-   * @return {Array} x, y, z position in an array.
-   */
-  TestPulsor.prototype.getPosition = function () {
-    return this._position;
-  };
-
-  /**
-   * Set the object position with 3D vector.
-   * @param {Array} position x, y, z position in an array.
-   */
-  TestPulsor.prototype.setPosition = function (position) {
-    if (position) {
-      this._position[0] = position[0];
-      this._position[1] = position[1];
-      this._position[2] = position[2];
-    }
-
-    this._panner.setPosition.apply(this._panner, this._position);
-  };
-
-  /**
-   * Get the object orientation with 3D vector.
-   * @param {Array} position x, y, z position in an array.
-   */
-  TestPulsor.prototype.getOrientation = function () {
-    return this._orientation;
-  };
-
-  TestPulsor.prototype.setOrientation = function (orientation) {
-    if (orientation) {
-      this._orientation[0] = orientation[0];
-      this._orientation[1] = orientation[1];
-      this._orientation[2] = orientation[2];
-    }
-
-    this._panner.setOrientation.apply(this._panner, this._orientation);
-  };
-
+  // Master audio context.
+  var _context = _LEGACY_WEBAUDIO ? new webkitAudioContext() : new AudioContext();  
+  
 
   /**
    * A buffer source player with HRTF panning for testing purpose.
@@ -124,17 +32,24 @@
    * @param {Array} options.position x, y, z position in a array.
    */
   function TestSource (options) {
+
     this._src = _context.createBufferSource();
     this._out = _context.createGain();
     this._panner = _context.createPanner();
     this._analyser = _context.createAnalyser();
 
-    this._src.connect(this._out).connect(this._analyser).connect(this._panner).connect(_context.destination);
-
+    this._src.connect(this._out);
+    this._out.connect(this._analyser);
+    this._analyser.connect(this._panner);
+    this._panner.connect(_context.destination);
+    
     this._src.buffer = options.buffer;
-    this._src.detune.value = (options.detune || 0);
     this._src.loop = true;
     this._out.gain.value = options.gain;
+
+    this._analyser.fftSize = 1024;
+    this._analyser.smoothingTimeConstant = 0.85;
+    this._lastRMSdB = 0.0;
 
     this._panner.panningModel = _PANNING_MODEL;
     this._panner.distanceModel = _DISTANCE_MODEL;
@@ -145,18 +60,24 @@
     this._position = [0, 0, 0];
     this._orientation = [1, 0, 0];
 
-    this._analyserBuffer = new Uint8Array(this._analyser.frequencyBinCount);
+    this._analyserBuffer = new Uint8Array(this._analyser.fftSize);
+
+    if (!_LEGACY_WEBAUDIO) {
+      this._src.detune.value = (options.detune || 0);
+      this._analyserBuffer = new Float32Array(this._analyser.fftSize);
+    }
 
     this.setPosition(options.position);
     this.setOrientation(options.orientation);
+
   };
 
   TestSource.prototype.start = function () {
-    this._src.start();
+    this._src.start(0);
   };
 
   TestSource.prototype.stop = function () {
-    this._src.stop();
+    this._src.stop(0);
   };
 
   TestSource.prototype.getPosition = function () {
@@ -187,14 +108,32 @@
     this._panner.setOrientation.apply(this._panner, this._orientation);
   };
 
-  TestSource.prototype.getVisualizerScale = function () {
-    this._analyser.getByteFrequencyData(this._analyserBuffer);
-    var total = 0;
-    for (var i = 0; i < this._analyserBuffer.length; ++i) {
-      total += this._analyserBuffer[i];
+  TestSource.prototype.getCubeScale = function () {
+    // Safari does not support getFloatTimeDomainData(), so fallback to the
+    // naive spectral energy sum. This is relative expensive.
+    if (_LEGACY_WEBAUDIO) {
+      this._analyser.getByteFrequencyData(this._analyserBuffer);
+
+      for (var k = 0, total = 0; k < this._analyserBuffer.length; ++k)
+        total += this._analyserBuffer[k];
+      total /= this._analyserBuffer.length;
+
+      return (total / 256.0) * 1.5;
     }
-    total /= this._analyserBuffer.length;
-    return (total / 256.0);
+
+    this._analyser.getFloatTimeDomainData(this._analyserBuffer);
+    for (var i = 0, sum = 0; i < this._analyserBuffer.length; ++i)
+      sum += this._analyserBuffer[i] * this._analyserBuffer[i];
+    
+    // Calculate RMS and convert it to DB for perceptual loudness.
+    var rms = Math.sqrt(sum / this._analyserBuffer.length);
+    var db = 30 + 10 / Math.LN10 * Math.log(rms <= 0 ? 0.0001 : rms);
+
+    // Moving average with the alpha of 0.525. Experimentally determined.
+    this._lastRMSdB += 0.525 * ((db < 0 ? 0 : db) - this._lastRMSdB);
+
+    // Scaling by 1/30 is also experimentally determined.
+    return this._lastRMSdB / 30.0;
   };
 
 
@@ -295,6 +234,13 @@
       this._reject(this._buffers);
   };
 
+  /**
+   * Returns true if the web audio implementation is outdated.
+   * @return {Boolean}
+   */
+  VRAudioPanner.isWebAudioOutdated = function () {
+    return _LEGACY_WEBAUDIO;
+  }
 
   /**
    * Static method for updating listener's position.
@@ -310,7 +256,8 @@
    * @param {Array} orientation Listener's up vector in x, y, z.
    */
   VRAudioPanner.setListenerOrientation = function (orientation, upvector) {
-    _context.listener.setOrientation(orientation[0], orientation[1], orientation[2],
+    _context.listener.setOrientation(
+      orientation[0], orientation[1], orientation[2],
       upvector[0], upvector[1], upvector[2]);
   };
 
@@ -324,14 +271,6 @@
     return new Promise(function (resolve, reject) {
       new AudioBufferManager(_context, dataModel, resolve, reject, onprogress);
     });
-  };
-
-  /**
-   * Create a pulse generator. See TestPulsor class for parameter description.
-   * @return {TestPulsor}
-   */
-  VRAudioPanner.createTestPulsor = function (options) {
-    return new TestPulsor(options);
   };
 
   /**
