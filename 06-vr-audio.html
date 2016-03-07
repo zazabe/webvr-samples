@@ -156,9 +156,12 @@ found in the LICENSE file.
           orientation: [0, 0, 0]
         });
 
-        drumSource.start();
-        guitarSource.start();
-        percSource.start();
+        var button = VRSamplesUtil.addButton("Start sound", null, null, function () { 
+          drumSource.start();
+          guitarSource.start();
+          percSource.start();
+          VRSamplesUtil.removeButton(button);
+        });
 
         isAudioPannerReady = true;
       }

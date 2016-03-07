@@ -110,7 +110,7 @@
 
   TestSource.prototype.getCubeScale = function () {
     // Safari does not support getFloatTimeDomainData(), so fallback to the
-    // naive energy sum.
+    // naive spectral energy sum. This is relative expensive.
     if (_LEGACY_WEBAUDIO) {
       this._analyser.getByteFrequencyData(this._analyserBuffer);
 
@@ -122,16 +122,17 @@
     }
 
     this._analyser.getFloatTimeDomainData(this._analyserBuffer);
-
-    // Calculate RMS and convert it to DB for perceptual loudness.
     for (var i = 0, sum = 0; i < this._analyserBuffer.length; ++i)
       sum += this._analyserBuffer[i] * this._analyserBuffer[i];
     
-    // TODO: refactor/optimize this.
+    // Calculate RMS and convert it to DB for perceptual loudness.
     var rms = Math.sqrt(sum / this._analyserBuffer.length);
     var db = 30 + 10 / Math.LN10 * Math.log(rms <= 0 ? 0.0001 : rms);
+
+    // Moving average with the alpha of 0.525. Experimentally determined.
     this._lastRMSdB += 0.525 * ((db < 0 ? 0 : db) - this._lastRMSdB);
 
+    // Scaling by 1/30 is also experimentally determined.
     return this._lastRMSdB / 30.0;
   };
 
