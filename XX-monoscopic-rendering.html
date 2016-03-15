@@ -254,7 +254,7 @@ found in the LICENSE file.
             // We want to render with a symmetrical field of view.
             mat4.perspectiveFromFieldOfView(projectionMat, monoView.fieldOfView, 0.1, 1024.0);
           } else {
-            mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+            mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           }
 
           var pose = vrDisplay.getPose();
@@ -274,7 +274,7 @@ found in the LICENSE file.
           window.requestAnimationFrame(onAnimationFrame);
 
           // No VRDisplay found.
-          mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+          mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(viewMat);
           cubeSea.render(projectionMat, viewMat, stats);
 

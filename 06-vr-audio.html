@@ -161,7 +161,7 @@ found in the LICENSE file.
           orientation: [0, 0, 0]
         });
 
-        var button = VRSamplesUtil.addButton("Start sound", null, null, function () { 
+        var button = VRSamplesUtil.addButton("Start sound", null, null, function () {
           drumSource.start();
           guitarSource.start();
           percSource.start();
@@ -177,7 +177,7 @@ found in the LICENSE file.
 
         // Load sound files and then initiate WebAudio.
         var infoElement = VRSamplesUtil.addInfo("Loading audio files...");
-        
+
         VRAudioPanner
           .loadAudioFiles(soundFileData, null)
           .then(function (buffers) {
@@ -283,7 +283,7 @@ found in the LICENSE file.
           mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
           mat4.invert(viewMat, viewMat);
         } else {
-          mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+          mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.invert(viewMat, poseInMat);
         }
 
@@ -362,7 +362,7 @@ found in the LICENSE file.
 
           // No VRDisplay found.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-          mat4.perspective(projectionMat, 45, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+          mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(viewMat);
           mat4.translate(viewMat, viewMat, [0, -PLAYER_HEIGHT, 0]);
           cubeIsland.render(projectionMat, viewMat, stats);
