@@ -16,4 +16,7 @@ conceptual knowledge of both.
  - [WebVR Spec](https://mozvr.github.io/webvr-spec/)
  - [How to Get WebVR](http://webvr.info/)
 
+# Attributions
 WebVR image used with the permission of [Jaume Sanchez](https://www.clicktorelease.com/).
+["Afterglow of a sunset"](https://commons.wikimedia.org/wiki/File:Afterglow_of_a_sunset.jpg) image produced by the Masato OHTA and licensed under the [Creative Commons Attribution 2.0 Generic](https://creativecommons.org/licenses/by/2.0/deed.en) license
+
