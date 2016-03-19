@@ -124,6 +124,7 @@ window.VRPanorama = (function () {
         console.error(ev.message);
         reject(ev.message);
       }, false);
+      img.crossOrigin = 'anonymous';
       img.src = url;
     });
   };
@@ -160,7 +161,8 @@ window.VRPanorama = (function () {
 
       video.loop = true;
       video.autoplay = true;
-      video.crossorigin = "anonymous";
+      video.crossOrigin = 'anonymous';
+      video.setAttribute('webkit-playsinline', '');
       video.src = url;
     });
   };
