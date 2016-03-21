@@ -11,7 +11,7 @@ found in the LICENSE file.
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
-    <title>XX - Advanced Mirroring</title>
+    <title>07 - Advanced Mirroring</title>
 
     <!--
       This sample demonstrates how to display a different view of the scene on
@@ -191,6 +191,7 @@ found in the LICENSE file.
       }
 
       function renderSceneThirdPersonView (pose) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
         mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
         // Set up the camera in the back left corner of the island
@@ -240,7 +241,7 @@ found in the LICENSE file.
             // shown on the page. Depending on the content this can be expensive
             // so this technique should only be used when it will not interfere
             // with the performance of the VR rendering.
-            if (vrDisplay.hasExternalDisplay) {
+            if (vrDisplay.capabilities.hasExternalDisplay) {
               renderSceneThirdPersonView(pose);
             }
           } else {
