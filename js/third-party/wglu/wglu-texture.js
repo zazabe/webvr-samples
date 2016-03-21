@@ -386,6 +386,7 @@ var WGLUTextureLoader = (function() {
       this.callback = null;
 
       this.image = new Image();
+      this.image.crossOrigin = 'anonymous';
       this.image.addEventListener('load', function() {
         var gl = self.gl;
         gl.bindTexture(gl.TEXTURE_2D, self.texture);
