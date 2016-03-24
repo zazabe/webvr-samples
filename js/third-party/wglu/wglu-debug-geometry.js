@@ -201,6 +201,14 @@ var WGLUDebugGeometry = (function() {
     gl.drawElements(gl.TRIANGLES, this.cubeIndexCount, gl.UNSIGNED_SHORT, this.cubeIndexOffset * 2.0);
   };
 
+  DebugGeometry.prototype.drawBoxWithMatrix = function(mat, color) {
+    var gl = this.gl;
+
+    gl.uniformMatrix4fv(this.program.uniform.modelMat, false, mat);
+    gl.uniform4fv(this.program.uniform.color, color);
+    gl.drawElements(gl.TRIANGLES, this.cubeIndexCount, gl.UNSIGNED_SHORT, this.cubeIndexOffset * 2.0);
+  };
+
   DebugGeometry.prototype.drawRect = function(x, y, width, height, color) {
     var gl = this.gl;
 
