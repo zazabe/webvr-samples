@@ -1519,7 +1519,6 @@ CardboardDistorter.prototype.patch = function() {
     canvas.height = Util.getScreenHeight() * this.bufferScale;
 
     Object.defineProperty(canvas, 'width', {
-      writable: true,
       configurable: true,
       enumerable: true,
       get: function() {
@@ -1532,7 +1531,6 @@ CardboardDistorter.prototype.patch = function() {
     });
 
     Object.defineProperty(canvas, 'height', {
-      writable: true,
       configurable: true,
       enumerable: true,
       get: function() {
