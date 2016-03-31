@@ -232,7 +232,7 @@ found in the LICENSE file.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
           mat4.perspective(projectionMat, Math.PI*0.4, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(viewMat);
-          cubeIsland.render(projectionMat, viewMat, stats);
+          panorama.render(projectionMat, viewMat);
 
           stats.renderOrtho();
         }

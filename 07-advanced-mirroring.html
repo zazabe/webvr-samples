@@ -215,7 +215,7 @@ found in the LICENSE file.
           mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
           mat4.invert(viewMat, viewMat);
         } else {
-          mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+          mat4.perspective(projectionMat, Math.PI*0.4, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.invert(viewMat, poseInMat);
         }
 
@@ -225,7 +225,7 @@ found in the LICENSE file.
       function renderSceneThirdPersonView (poseInMat) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-        mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+        mat4.perspective(projectionMat, Math.PI*0.4, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
 
         // Set up the camera in the back left corner of the island
         mat4.identity(viewMat);

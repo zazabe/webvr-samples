@@ -100,7 +100,7 @@ found in the LICENSE file.
         // begin rendering in stereo, but for now they only need to be updated
         // when the window is resized.
         gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-        mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
+        mat4.perspective(projectionMat, Math.PI*0.4, webglCanvas.width/webglCanvas.height, 0.1, 1024.0);
       }
       window.addEventListener("resize", onResize, false);
       onResize();

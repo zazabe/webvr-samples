@@ -218,7 +218,7 @@ found in the LICENSE file.
         if (eye)
           mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
         else
-          mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+          mat4.perspective(projectionMat, Math.PI*0.4, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
 
         mat4.fromRotationTranslation(viewMat, orientation, position);
         if (eye)
@@ -270,7 +270,7 @@ found in the LICENSE file.
 
           // No VRDisplay found.
           gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-          mat4.perspective(projectionMat, Math.PI*0.25, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
+          mat4.perspective(projectionMat, Math.PI*0.4, webglCanvas.width / webglCanvas.height, 0.1, 1024.0);
           mat4.identity(viewMat);
           cubeSea.render(projectionMat, viewMat, stats);
 
