@@ -89,9 +89,11 @@ found in the LICENSE file.
                   value += ",";
                 if (obj[key][idx] >= 0)
                   value += " ";
-                value += obj[key][idx].toFixed(2);
+                value += obj[key][idx].toFixed(3);
               }
               li.innerHTML = "<b>" + key + ":</b> <span class='float-array'>[" + value + " ]</span>";
+            } else if (typeof obj[key] === "number" && obj[key] !== (obj[key]|0)) {
+              li.innerHTML = "<b>" + key + ":</b> " + obj[key].toFixed(3);
             } else if (typeof obj[key] === "object") {
               li.innerHTML = "<b>" + key + ":</b>";
               li.appendChild(buildMemberList(obj[key]));
