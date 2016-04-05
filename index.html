@@ -8,6 +8,7 @@ found in the LICENSE file.
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <base target="_parent" />
 
     <title>WebVR Samples</title>
 
@@ -55,58 +56,68 @@ found in the LICENSE file.
     </style>
   </head>
   <body>
-    <h1>WebVR Samples <a class="github-link" href="https://github.com/toji/webvr-samples">(View source on GitHub)</a></h1>
-    <p>Simple example applications to demonstrate various aspects of the WebVR API.</p>
-    <ul class="sample-list">
-      <li data-index="00">
-        <a href="00-hello-webvr.html">Hello WebVR!</a>
-        <a href="00-hello-webvr.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="01">
-        <a href="01-vr-input.html">VR Input</a>
-        <a href="01-vr-input.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="02">
-        <a href="02-stereo-rendering.html">Stereo Rendering</a>
-        <a href="02-stereo-rendering.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="03">
-        <a href="03-vr-presentation.html">VR Presentation</a>
-        <a href="03-vr-presentation.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="04">
-        <a href="04-simple-mirroring.html">Simple Mirroring</a>
-        <a href="04-simple-mirroring.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="05">
-        <a href="05-room-scale.html">Room Scale</a>
-        <a href="05-room-scale.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="06">
-        <a href="06-vr-audio.html">VR Audio</a>
-        <a href="06-vr-audio.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="07">
-        <a href="07-advanced-mirroring.html">Advanced Mirroring</a>
-        <a href="07-advanced-mirroring.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-    </ul>
+    <h1>WebVR Samples</h1>
+    <p>These sample pages demonstrate how to use various aspects of the WebVR API.</p>
+    <ul id="samples" class="sample-list"></ul>
 
     <h2>Work-in-progress samples</h2>
     <p>These samples are not yet complete and may not accurately portray the API's usage.</p>
-    <ul class="sample-list">
-      <li data-index="XX">
-        <a href="XX-monoscopic-rendering.html">Monoscopic Rendering</a>
-        <a href="XX-monoscopic-rendering.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="XX">
-        <a href="XX-360-panorama.html">360 Degree Panorama</a>
-        <a href="XX-360-panorama.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-      <li data-index="XX">
-        <a href="XX-vr-controllers.html">VR Controllers</a>
-        <a href="XX-vr-controllers.html?polyfill=1">(Using Polyfill)</a>
-      </li>
-    </ul>
+    <ul id="wip-samples" class="sample-list"></ul>
+
+    <br/>
+    <hr/>
+
+    <h3><a class="github-link" href="https://github.com/toji/webvr-samples">View project on GitHub</a></h3>
+
+    <script>
+      var pages = [
+        { index: "00", path: "00-hello-webvr.html", title: "Hello WebVR!" },
+        { index: "01", path: "01-vr-input.html", title: "VR Input" },
+        { index: "02", path: "02-stereo-rendering.html", title: "Stereo Rendering" },
+        { index: "03", path: "03-vr-presentation.html", title: "VR Presentation" },
+        { index: "04", path: "04-simple-mirroring.html", title: "Simple Mirroring" },
+        { index: "05", path: "05-room-scale.html", title: "Room Scale" },
+        { index: "06", path: "06-vr-audio.html", title: "VR Audio" },
+        { index: "07", path: "07-advanced-mirroring.html", title: "Advanced Mirroring" },
+
+        // WIP samples, no index
+        { path: "XX-monoscopic-rendering.html", title: "Monoscopic Rendering" },
+        { path: "XX-360-panorama.html", title: "360 Degree Panorama" },
+        { path: "XX-vr-controllers.html", title: "VR Controllers" }
+      ];
+
+      // Append an element for every item in the pages list.
+      var samples = document.getElementById("samples");
+      var wipSamples = document.getElementById("wip-samples");
+
+      for (var i = 0; i < pages.length; ++i) {
+        var page = pages[i];
+        var wipPage = !page.index;
+
+        var li = document.createElement("li");
+        li.setAttribute("data-index", wipPage ? "XX" : page.index);
+
+        var sampleLink = document.createElement("a");
+        sampleLink.href = page.path;
+        sampleLink.innerHTML = page.title;
+        li.appendChild(sampleLink);
+
+        var polyfillLink = document.createElement("a");
+        polyfillLink.href = page.path + "?polyfill=1";
+        polyfillLink.innerHTML = "(Use Polyfill)";
+        li.appendChild(polyfillLink);
+
+        var sourceLink = document.createElement("a");
+        sourceLink.href = "https://github.com/toji/webvr-samples/blob/gh-pages/" + page.path;
+        sourceLink.innerHTML = "(Source)";
+        li.appendChild(sourceLink);
+
+        if (wipPage) {
+          wipSamples.appendChild(li);
+        } else {
+          samples.appendChild(li);
+        }
+      }
+    </script>
   </body>
 </html>
