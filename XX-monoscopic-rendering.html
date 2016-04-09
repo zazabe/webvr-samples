@@ -138,27 +138,35 @@ found in the LICENSE file.
           vec4.transformMat4(rightPlane, rightPlane, leftEyeProjection);
           var leftX = -leftPlane[0] / leftPlane[3];
           var rightX = rightPlane[0]/ rightPlane[3];
+          var swapped = false;
+          if (leftX < rightX) {
+            swapped = true;
+            var tmp = leftX;
+            leftX = rightX;
+            rightX = tmp;
+          }
+
           var leftPercentage = leftX / (leftX + rightX);
           var leftWidth = leftPercentage * leftEye.renderWidth;
           var monoWidth = 2 * leftWidth;
 
-          var eyeRenderWidth = Math.min(leftEye.renderWidth, monoWidth);
-
+          var horizontalDegrees = Math.max(leftEye.fieldOfView.leftDegrees, leftEye.fieldOfView.rightDegrees);
           var monoFieldOfView = {
             upDegrees: leftEye.fieldOfView.upDegrees,
             downDegrees: leftEye.fieldOfView.downDegrees,
-            leftDegrees: leftEye.fieldOfView.leftDegrees,
-            rightDegrees: leftEye.fieldOfView.leftDegrees
+            leftDegrees: horizontalDegrees,
+            rightDegrees: horizontalDegrees
           };
+
+          var lefBounds = [0, 0, leftEye.renderWidth / monoWidth, 1];
+          var rightBounds = [(monoWidth - leftEye.renderWidth) / monoWidth, 0, 1, 1];
 
           return {
             fieldOfView: monoFieldOfView,
             renderWidth: monoWidth,
             renderHeight: leftEye.renderHeight,
-            leftViewport: [0, 0, eyeRenderWidth, leftEye.renderHeight],
-            rightViewport: [(monoWidth - eyeRenderWidth), 0, eyeRenderWidth, leftEye.renderHeight],
-            leftUVBounds: [0, 0, monoWidth / eyeRenderWidth, 1],
-            rightUVBounds: [(monoWidth - eyeRenderWidth) / monoWidth, 0, monoWidth / eyeRenderWidth, 1]
+            leftBounds: swapped ? rightBounds : lefBounds,
+            rightBounds: swapped ? lefBounds : rightBounds,
           };
         };
       })();
@@ -167,8 +175,8 @@ found in the LICENSE file.
         var layer = {
           source: webglCanvas,
           // To indicate a monoscopic rendering we set both viewports to overlap.
-          leftBounds: monoView.leftUVBounds,
-          rightBounds: monoView.rightUVBounds,
+          leftBounds: monoView.leftBounds,
+          rightBounds: monoView.rightBounds,
         };
         vrDisplay.requestPresent(layer).then(function () {
         }, function () {
