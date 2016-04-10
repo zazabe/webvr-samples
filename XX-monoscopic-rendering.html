@@ -148,7 +148,7 @@ found in the LICENSE file.
 
           var leftPercentage = leftX / (leftX + rightX);
           var leftWidth = leftPercentage * leftEye.renderWidth;
-          var monoWidth = 2 * leftWidth;
+          var monoWidth = Math.floor(2 * leftWidth);
 
           var horizontalDegrees = Math.max(leftEye.fieldOfView.leftDegrees, leftEye.fieldOfView.rightDegrees);
           var monoFieldOfView = {
@@ -159,7 +159,7 @@ found in the LICENSE file.
           };
 
           var lefBounds = [0, 0, leftEye.renderWidth / monoWidth, 1];
-          var rightBounds = [(monoWidth - leftEye.renderWidth) / monoWidth, 0, 1, 1];
+          var rightBounds = [(monoWidth - leftEye.renderWidth) / monoWidth, 0, leftEye.renderWidth / monoWidth, 1];
 
           return {
             fieldOfView: monoFieldOfView,
