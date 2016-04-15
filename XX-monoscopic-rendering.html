@@ -172,13 +172,13 @@ found in the LICENSE file.
       })();
 
       function onVRRequestPresent () {
-        var layer = {
+        var layers = [{
           source: webglCanvas,
           // To indicate a monoscopic rendering we set both viewports to overlap.
           leftBounds: monoView.leftBounds,
           rightBounds: monoView.rightBounds,
-        };
-        vrDisplay.requestPresent(layer).then(function () {
+        }];
+        vrDisplay.requestPresent(layers).then(function () {
         }, function () {
           VRSamplesUtil.addError("requestPresent failed.", 2000);
         });

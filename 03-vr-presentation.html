@@ -53,6 +53,7 @@ found in the LICENSE file.
         // Polyfill optimizations
         DIRTY_SUBMIT_FRAME_BINDINGS: true,
         BUFFER_SCALE: 0.75,
+        FORCE_ENABLE_VR: true
       };
     </script>
     <script src="js/third-party/webvr-polyfill.js"></script>
@@ -115,7 +116,7 @@ found in the LICENSE file.
 
       function onVRRequestPresent () {
         // This can only be called in response to a user gesture.
-        vrDisplay.requestPresent({ source: webglCanvas }).then(function () {
+        vrDisplay.requestPresent([{ source: webglCanvas }]).then(function () {
           // Nothing to do because we're handling things in onVRPresentChange.
         }, function () {
           VRSamplesUtil.addError("requestPresent failed.", 2000);
