@@ -82,6 +82,7 @@ found in the LICENSE file.
       var vrPresentButton = null;
       var orientation = [0, 0, 0, 1];
       var position = [0, 0, 0];
+      var lastVibration = 0;
 
       // ===================================================
       // WebGL scene setup. This code is not WebVR specific.
@@ -216,7 +217,7 @@ found in the LICENSE file.
         }
       }
 
-      function renderSceneView (poseInMat, eye) {
+      function renderSceneView (poseInMat, gamepads, eye) {
         if (eye) {
           mat4.translate(viewMat, poseInMat, eye.offset);
           mat4.perspectiveFromFieldOfView(projectionMat, eye.fieldOfView, 0.1, 1024.0);
@@ -229,50 +230,47 @@ found in the LICENSE file.
         cubeIsland.render(projectionMat, viewMat, stats);
 
         debugGeom.bind(projectionMat, viewMat);
-        // Loop over every gamepad and if we find any that have a pose render it
-        var gamepads = navigator.getGamepads();
+
+        // Render every gamepad with a pose we found
         for (var i = 0; i < gamepads.length; ++i) {
           var gamepad = gamepads[i];
-          // The array may contain undefined gamepads, so check for that as well
-          // as a non-null pose.
-          if (gamepad && gamepad.pose) {
-            // Because this sample is done in standing space we need to apply
-            // the same transformation to the gamepad pose as we did the
-            // VRDisplay's pose.
-            getPoseMatrix(gamepadMat, gamepad.pose);
 
-            // Scaled down to from 1 meter to be something closer to the size of
-            // a hand.
-            mat4.scale(gamepadMat, gamepadMat, [0.1, 0.1, 0.1]);
+          // Because this sample is done in standing space we need to apply
+          // the same transformation to the gamepad pose as we did the
+          // VRDisplay's pose.
+          getPoseMatrix(gamepadMat, gamepad.pose);
 
-            // Loop through all the gamepad's axes and rotate the cube by their
-            // value.
-            for (var j = 0; j < gamepad.axes.length; ++j) {
-              switch (j%3) {
-                case 0:
-                  mat4.rotateX(gamepadMat, gamepadMat, gamepad.axes[j] * Math.PI);
-                  break;
-                case 1:
-                  mat4.rotateY(gamepadMat, gamepadMat, gamepad.axes[j] * Math.PI);
-                  break;
-                case 2:
-                  mat4.rotateZ(gamepadMat, gamepadMat, gamepad.axes[j] * Math.PI);
-                  break;
-              }
-            }
+          // Scaled down to from 1 meter to be something closer to the size of
+          // a hand.
+          mat4.scale(gamepadMat, gamepadMat, [0.1, 0.1, 0.1]);
 
-            // Show the gamepad's cube as red if any buttons are pressed, blue
-            // otherwise.
-            vec4.set(gamepadColor, 0, 0, 1, 1);
-            for (var j = 0; j < gamepad.buttons.length; ++j) {
-              if (gamepad.buttons[j].pressed) {
-                vec4.set(gamepadColor, gamepad.buttons[j].value, 0, 0, 1);
+          // Loop through all the gamepad's axes and rotate the cube by their
+          // value.
+          for (var j = 0; j < gamepad.axes.length; ++j) {
+            switch (j%3) {
+              case 0:
+                mat4.rotateX(gamepadMat, gamepadMat, gamepad.axes[j] * Math.PI);
                 break;
-              }
+              case 1:
+                mat4.rotateY(gamepadMat, gamepadMat, gamepad.axes[j] * Math.PI);
+                break;
+              case 2:
+                mat4.rotateZ(gamepadMat, gamepadMat, gamepad.axes[j] * Math.PI);
+                break;
             }
-
-            debugGeom.drawBoxWithMatrix(gamepadMat, gamepadColor);
           }
+
+          // Show the gamepad's cube as red if any buttons are pressed, blue
+          // otherwise.
+          vec4.set(gamepadColor, 0, 0, 1, 1);
+          for (var j = 0; j < gamepad.buttons.length; ++j) {
+            if (gamepad.buttons[j].pressed) {
+              vec4.set(gamepadColor, gamepad.buttons[j].value, 0, 0, 1);
+              break;
+            }
+          }
+
+          debugGeom.drawBoxWithMatrix(gamepadMat, gamepadColor);
         }
       }
 
@@ -284,20 +282,51 @@ found in the LICENSE file.
         if (vrDisplay) {
           vrDisplay.requestAnimationFrame(onAnimationFrame);
 
+          // Loop over every gamepad and if we find any that have a pose use it.
+          var vrGamepads = [];
+
+          var gamepads = navigator.getGamepads();
+          for (var i = 0; i < gamepads.length; ++i) {
+            var gamepad = gamepads[i];
+            // The array may contain undefined gamepads, so check for that as
+            // well as a non-null pose.
+            if (gamepad && gamepad.pose) {
+
+              vrGamepads.push(gamepad);
+
+              if ("vibrate" in gamepad) {
+                for (var j = 0; j < gamepad.buttons.length; ++j) {
+                  if (gamepad.buttons[j].pressed) {
+                    //gamepad.vibrate(1000);
+                    // Vibrate the gamepad relative to the amount the button is pressed.
+                    var vibrationDelay = (500 * (1.0 - gamepad.buttons[j].value)) + 100;
+
+                    if (t - lastVibration > vibrationDelay) {
+                      gamepad.vibrate(100);
+                      lastVibration = t;
+                    }
+
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
           var pose = vrDisplay.getPose();
           getPoseMatrix(poseMat, pose);
 
           if (vrDisplay.isPresenting) {
             gl.viewport(0, 0, webglCanvas.width * 0.5, webglCanvas.height);
-            renderSceneView(poseMat, vrDisplay.getEyeParameters("left"));
+            renderSceneView(poseMat, vrGamepads, vrDisplay.getEyeParameters("left"));
 
             gl.viewport(webglCanvas.width * 0.5, 0, webglCanvas.width * 0.5, webglCanvas.height);
-            renderSceneView(poseMat, vrDisplay.getEyeParameters("right"));
+            renderSceneView(poseMat, vrGamepads, vrDisplay.getEyeParameters("right"));
 
             vrDisplay.submitFrame(pose);
           } else {
             gl.viewport(0, 0, webglCanvas.width, webglCanvas.height);
-            renderSceneView(poseMat, null);
+            renderSceneView(poseMat, vrGamepads, null);
             stats.renderOrtho();
           }
         } else {
