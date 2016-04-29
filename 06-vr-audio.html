@@ -105,7 +105,9 @@ found in the LICENSE file.
         var textureLoader = new WGLUTextureLoader(gl);
         var texture = textureLoader.loadTexture("media/textures/cube-sea.png");
 
-        if (vrDisplay && vrDisplay.stageParameters) {
+        if (vrDisplay && vrDisplay.stageParameters &&
+            vrDisplay.stageParameters.sizeX > 0 &&
+            vrDisplay.stageParameters.sizeZ > 0) {
           cubeIsland = new VRCubeIsland(gl, texture, vrDisplay.stageParameters.sizeX, vrDisplay.stageParameters.sizeZ);
         } else {
           cubeIsland = new VRCubeIsland(gl, texture, 2, 2);
@@ -228,9 +230,7 @@ found in the LICENSE file.
 
             init(true);
 
-            if (!vrDisplay.stageParameters) {
-              VRSamplesUtil.addButton("Reset Pose", "R", null, function () { vrDisplay.resetPose(); });
-            }
+            VRSamplesUtil.addButton("Reset Pose", "R", null, function () { vrDisplay.resetPose(); });
 
             if (vrDisplay.capabilities.canPresent)
               vrPresentButton = VRSamplesUtil.addButton("Enter VR", "E", "media/icons/cardboard64.png", onVRRequestPresent);

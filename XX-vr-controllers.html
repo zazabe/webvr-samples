@@ -161,16 +161,13 @@ found in the LICENSE file.
 
             initWebGL(true);
 
-            if (vrDisplay.stageParameters) {
-              // If we have stageParameters use that to resize our scene to
-              // match the users available space more closely.
+            if (vrDisplay.stageParameters &&
+                vrDisplay.stageParameters.sizeX > 0 &&
+                vrDisplay.stageParameters.sizeZ > 0) {
               cubeIsland.resize(vrDisplay.stageParameters.sizeX, vrDisplay.stageParameters.sizeZ);
-            } else {
-              VRSamplesUtil.addInfo("VRDisplay did not report stageParameters", 3000);
-              // Resetting the pose in standing space isn't useful, because the
-              // headset should always be relative to the physical room.
-              VRSamplesUtil.addButton("Reset Pose", "R", null, function () { vrDisplay.resetPose(); });
             }
+
+            VRSamplesUtil.addButton("Reset Pose", "R", null, function () { vrDisplay.resetPose(); });
 
             if (vrDisplay.capabilities.canPresent)
               vrPresentButton = VRSamplesUtil.addButton("Enter VR", "E", "media/icons/cardboard64.png", onVRRequestPresent);
