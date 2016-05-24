@@ -70,10 +70,20 @@ found in the LICENSE file.
         // This function walks through the object recursively and builds a
         // list of all the properties and values. It's a quick and dirty way
         // to dump the contents of a VRDisplay onto the screen.
-        function buildMemberList (obj) {
+        function buildMemberList (obj, depth) {
+          if (depth >= 5) {
+            return; // Don't let this infinitely recurse on us.
+          }
+
           var ul = document.createElement("ul");
 
           for (var key in obj) {
+            // Ignore some names that are intended to be "private"
+            if (!key.length || key[0] == "_" || key[key.length-1] == "_") {
+              continue;
+            }
+
+            // Don't list functions
             if (typeof obj[key] === "function") {
               continue;
             }
@@ -98,7 +108,7 @@ found in the LICENSE file.
               li.innerHTML = "<b>" + key + ":</b> " + obj[key].toFixed(3);
             } else if (typeof obj[key] === "object") {
               li.innerHTML = "<b>" + key + ":</b>";
-              li.appendChild(buildMemberList(obj[key]));
+              li.appendChild(buildMemberList(obj[key], depth+1));
             } else {
               li.innerHTML = "<b>" + key + ":</b> " + obj[key];
             }
@@ -109,7 +119,7 @@ found in the LICENSE file.
           return ul;
         }
 
-        var memberUL = buildMemberList(vrDisplay);
+        var memberUL = buildMemberList(vrDisplay, 0);
 
         var pose = vrDisplay.getPose();
         var poseLI = document.createElement("li");
