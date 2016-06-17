@@ -134,7 +134,7 @@ found in the LICENSE file.
       function onVRPresentChange () {
         // When we begin or end presenting, the canvas should be resized to the
         // recommended dimensions for the display.
-        onResize();
+        setTimeout(onResize, 1000);
 
         if (vrDisplay.isPresenting) {
           if (vrDisplay.capabilities.hasExternalDisplay) {
